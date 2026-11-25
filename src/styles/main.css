@@ -2729,3 +2729,26 @@ html[data-tone="dark"] .filter-pill.is-active {
 .tutorial-kv strong {
   color: var(--ink-strong);
 }
+
+
+.step-verify {
+  margin-top: 12px;
+  padding: 10px 13px;
+  border-radius: 9px;
+  border: 1px solid rgba(15, 138, 120, 0.28);
+  background: var(--accent-tech-soft);
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-body);
+}
+
+.verify-badge {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-tech);
+  white-space: nowrap;
+}

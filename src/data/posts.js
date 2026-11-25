@@ -464,129 +464,192 @@ function renderGcpVpsArticle() {
       </div>
     </section>
 
-    <!-- 04 / SSH LOGIN & DUAL-MODE ONE-CLICK DEPLOYMENT -->
+    <!-- 04 / STEP-BY-STEP WEB SSH & ONE-CLICK DEPLOYMENT -->
     <section class="art-section" id="sec-deploy">
       <div class="sec-header">
         <div class="sec-num">04</div>
         <div>
-          <h2 class="sec-title">SSH 登录与一键部署（无域名 / 有域名双方案）</h2>
-          <p class="sec-subtitle">使用官方网页 SSH 免配密钥登录，结合 sing-box-yg 一键脚本，按是否持有域名灵活选择自签或正规证书。</p>
+          <h2 class="sec-title">一步一步通过网页 SSH 完成节点搭建</h2>
+          <p class="sec-subtitle">虚拟机实例显示绿色对勾后，按以下 7 步顺序点击并输入命令，每一步都附带清晰的验证标志。</p>
         </div>
       </div>
 
-      <h3 class="art-subhead"><span class="sub-idx">04.1</span>登录网页 SSH 并切换 root 权限</h3>
-      <p class="art-p">
-        在 Google Cloud 控制台的虚拟机实例列表中，直接点击目标实例右侧的 <strong>SSH</strong> 按钮，并在弹窗中确认即可进入浏览器网页终端。进入后先执行以下命令切换至 <code>root</code> 权限：
-      </p>
-
-      <div class="code-block">
-        <div class="code-bar">
-          <span class="code-lang">BASH · SWITCH TO ROOT</span>
-          <button type="button" class="copy-btn" data-copy="sudo -i">复制命令</button>
-        </div>
-        <pre><code>sudo -i</code></pre>
-      </div>
-
-      <h3 class="art-subhead"><span class="sub-idx">04.2</span>运行一键安装脚本与基础选项确认</h3>
-      <p class="art-p">
-        打开 <a href="https://github.com/yonggekkk/sing-box-yg" target="_blank" rel="noopener noreferrer">yonggekkk/sing-box-yg</a> 项目主页，复制其中的 VPS 专用一键安装命令（通常取第一条即可）粘贴至 SSH 终端回车运行：
-      </p>
-
-      <div class="code-block">
-        <div class="code-bar">
-          <span class="code-lang">BASH · SING-BOX-YG INSTALL</span>
-          <button type="button" class="copy-btn" data-copy="bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)">复制命令</button>
-        </div>
-        <pre><code>bash &lt;(curl -Ls https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)</code></pre>
-      </div>
-
-      <div class="swiss-callout is-tech">
-        <strong>脚本初始化提示要点：</strong>脚本加载完成后选择<strong>一键安装</strong>；若脚本弹出 <strong>IPv4 与 IPv6 相关确认项</strong>，请依次输入两个 <code>yes</code> 确认放行/启用；随后出现的两项基础配置询问——<strong>是否开放端口</strong>与<strong>选择内核版本</strong>——均直接回车沿用默认设置即可。
-      </div>
-
-      <h3 class="art-subhead"><span class="sub-idx">04.3</span>配置证书：无域名 vs 有域名双方案</h3>
-      <p class="art-p">
-        接下来脚本会询问采用自签证书还是申请正规域名证书。请根据自身是否拥有域名二选一（使用 Cloudflare 解析域名时<strong>切勿开启代理小黄云</strong>）：
-      </p>
-
-      <div class="swiss-step-cols">
-        <div class="swiss-card">
-          <div class="swiss-card-head">
-            <h3 class="swiss-card-title">方案 A：无域名（最省事）</h3>
-            <span class="swiss-card-code">SELF-SIGNED</span>
+      <div class="tutorial-steps">
+        <!-- STEP 01 -->
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 01</span>
+            <h4 class="tutorial-step-title">打开网页 SSH 终端</h4>
           </div>
-          <ol class="step-list">
-            <li>
-              <span class="step-badge">01</span>
-              <span>脚本询问证书类型时，直接按<strong>回车</strong>选择默认<strong>自签证书</strong>。</span>
-            </li>
-            <li>
-              <span class="step-badge">02</span>
-              <span>无需任何 DNS 解析步骤，后续交互一路回车即可自动完成全部协议部署。</span>
-            </li>
-            <li>
-              <span class="step-badge">03</span>
-              <span>适合希望几分钟内快速跑通验证、暂不打算绑定个人域名的场景。</span>
-            </li>
-          </ol>
-        </div>
-
-        <div class="swiss-card">
-          <div class="swiss-card-head">
-            <h3 class="swiss-card-title">方案 B：有域名（推荐）</h3>
-            <span class="swiss-card-code">ACME TLS</span>
+          <p class="tutorial-lead">
+            在谷歌云「虚拟机实例」列表中找到刚创建的实例，直接点击该行右侧的 <strong>SSH</strong> 按钮；首次点击会弹出授权提示框，点击 <strong>授权</strong> 即可。
+          </p>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>浏览器弹出黑底白字的命令行窗口，底部光标在用户名后闪烁，说明已成功连上服务器。</span>
           </div>
-          <ol class="step-list">
-            <li>
-              <span class="step-badge">01</span>
-              <span><strong>添加 A 记录：</strong>登录 Cloudflare 进入目标域名的 DNS 页面，添加一条 <code>A</code> 记录；名称填自定义前缀（如 <code>test</code>），IPv4 地址填入谷歌云实例的外部 IP，<strong>务必关闭代理状态（小黄云）</strong>以防触发 CDN 互联扣费。</span>
-            </li>
-            <li>
-              <span class="step-badge">02</span>
-              <span><strong>验证解析生效：</strong>在本地电脑打开命令提示符（CMD），运行 <code>ping 你的完整域名</code>，确认括号内返回的 IP 与谷歌云外部 IP 一致（有丢包不影响解析验证）。</span>
-            </li>
-            <li>
-              <span class="step-badge">03</span>
-              <span><strong>脚本申请证书：</strong>回到 SSH 终端输入 <code>2</code> 选择申请正规证书；待依赖组件装完后，在证书申请菜单中依次输入 <code>1</code> → <code>1</code>。</span>
-            </li>
-            <li>
-              <span class="step-badge">04</span>
-              <span><strong>跳过邮箱并绑定域名：</strong>提示输入邮箱时直接回车跳过，接着填入刚解析好的完整域名；脚本校验域名与 IP 匹配后将自动完成正规证书签发。</span>
-            </li>
-          </ol>
+        </div>
+
+        <!-- STEP 02 -->
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 02</span>
+            <h4 class="tutorial-step-title">切换到 root 管理员权限</h4>
+          </div>
+          <p class="tutorial-lead">在黑色终端窗口中输入以下命令并按键盘 <strong>回车（Enter）</strong>：</p>
+          <div class="code-block" style="margin: 10px 0 12px;">
+            <div class="code-bar">
+              <span class="code-lang">BASH · ROOT</span>
+              <button type="button" class="copy-btn" data-copy="sudo -i">复制命令</button>
+            </div>
+            <pre><code>sudo -i</code></pre>
+          </div>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>命令行最左侧提示符从 <code>$</code> 变成 <code>#</code>（例如 <code>root@instance-xxx:~#</code>），说明已获取最高权限。</span>
+          </div>
+        </div>
+
+        <!-- STEP 03 -->
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 03</span>
+            <h4 class="tutorial-step-title">复制并运行一键安装脚本</h4>
+          </div>
+          <p class="tutorial-lead">
+            在浏览器新标签页打开 <a href="https://github.com/yonggekkk/sing-box-yg" target="_blank" rel="noopener noreferrer">github.com/yonggekkk/sing-box-yg</a>，在页面说明中找到 <strong>VPS 专用一键脚本</strong>（选第一条命令）点击右侧复制图标，或直接复制下方命令；回到 SSH 窗口按 <code>Ctrl + V</code>（Mac 为 <code>Command + V</code>）粘贴并按 <strong>回车</strong>：
+          </p>
+          <div class="code-block" style="margin: 10px 0 12px;">
+            <div class="code-bar">
+              <span class="code-lang">BASH · SING-BOX-YG</span>
+              <button type="button" class="copy-btn" data-copy="bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)">复制命令</button>
+            </div>
+            <pre><code>bash &lt;(curl -Ls https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)</code></pre>
+          </div>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>终端开始自动下载并安装依赖，几秒后出现带数字编号的彩色功能菜单。</span>
+          </div>
+        </div>
+
+        <!-- STEP 04 -->
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 04</span>
+            <h4 class="tutorial-step-title">启动一键安装并跳过基础设置</h4>
+          </div>
+          <ul class="tutorial-kv">
+            <li>在脚本主菜单中输入 <span class="param-pill">1</span>（选择“一键安装”）并按 <strong>回车</strong>。</li>
+            <li>若过程中弹出 <strong>IPv4 / IPv6 相关确认项</strong>，依次输入两个 <code>yes</code> 确认即可。</li>
+            <li><strong>询问是否开放端口：</strong>直接按 <strong>回车</strong> 保持默认。</li>
+            <li><strong>询问选择内核版本：</strong>直接按 <strong>回车</strong> 保持默认。</li>
+          </ul>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>屏幕推进到证书选择界面，提示选择“自签证书”或“申请正规证书”。</span>
+          </div>
+        </div>
+
+        <!-- STEP 05 -->
+        <div class="tutorial-step is-critical">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 05</span>
+            <h4 class="tutorial-step-title">配置证书（按是否有域名二选一）</h4>
+            <span class="swiss-tag swiss-tag-accent">有域名勿开小黄云</span>
+          </div>
+          <div class="swiss-step-cols" style="margin-top: 10px;">
+            <div class="swiss-card">
+              <div class="swiss-card-head">
+                <h5 class="swiss-card-title">情况 A：没有域名（最简单）</h5>
+                <span class="swiss-card-code">SELF-SIGNED</span>
+              </div>
+              <p class="module-body">
+                直接按 <strong>回车</strong> 选择自签证书即可跳过本步，进入后续端口配置。
+              </p>
+            </div>
+
+            <div class="swiss-card">
+              <div class="swiss-card-head">
+                <h5 class="swiss-card-title">情况 B：有 Cloudflare 域名（推荐）</h5>
+                <span class="swiss-card-code">ACME TLS</span>
+              </div>
+              <ol class="step-list">
+                <li>
+                  <span class="step-badge">01</span>
+                  <span>进入 Cloudflare 目标域名的 DNS 页面 → 点 <strong>添加记录</strong> → 类型选 <code>A</code>，名称填自定义前缀（如 <code>test</code>），IPv4 地址填谷歌云实例外部 IP → <strong>关闭代理状态（小黄云变灰）</strong> → 点 <strong>保存</strong>。</span>
+                </li>
+                <li>
+                  <span class="step-badge">02</span>
+                  <span>在本地电脑按 <code>Win + R</code> 输入 <code>cmd</code> 回车，运行 <code>ping 你的完整域名</code>，确认返回的 IP 与谷歌云外部 IP 一致。</span>
+                </li>
+                <li>
+                  <span class="step-badge">03</span>
+                  <span>回到 SSH 窗口，输入 <code>2</code>（申请正规证书）并回车；待组件装完后，在菜单中先输入 <code>1</code> 回车，再输入 <code>1</code> 回车；询问邮箱时直接按 <strong>回车</strong> 跳过；最后输入完整域名并回车。</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>选择情况 B 时，屏幕会显示域名与 IP 匹配成功并自动完成证书签发，随后进入端口设置界面。</span>
+          </div>
+        </div>
+
+        <!-- STEP 06 -->
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 06</span>
+            <h4 class="tutorial-step-title">确认端口并生成节点</h4>
+          </div>
+          <p class="tutorial-lead">
+            脚本询问协议端口时，直接按 <strong>回车</strong> 使用默认随机端口，UUID 也会自动生成。
+          </p>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>等待几秒，终端会一次性打印出 4 种协议的节点链接（<code>VLESS</code>、<code>VMess</code>、<code>Hysteria2</code>、<code>TUIC</code>）以及最下方的<strong>聚合订阅链接</strong>。</span>
+          </div>
+        </div>
+
+        <!-- STEP 07 -->
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 07</span>
+            <h4 class="tutorial-step-title">导入客户端并测试真连接</h4>
+          </div>
+          <p class="tutorial-lead">
+            用鼠标选中终端底部的<strong>聚合订阅链接</strong>（选中即自动复制，或右键复制），打开本地 <code>v2rayN</code> 等客户端，粘贴导入订阅并测试真连接。
+          </p>
+          <div class="protocol-grid protocol-grid-4" style="margin: 12px 0;">
+            <div class="protocol-card">
+              <span class="swiss-tag swiss-tag-tech">推荐 · 首选</span>
+              <div class="protocol-name">Hysteria2</div>
+              <p class="protocol-desc">高速 UDP 协议，日常与晚高峰表现突出。</p>
+            </div>
+            <div class="protocol-card">
+              <span class="swiss-tag swiss-tag-tech">推荐 · 首选</span>
+              <div class="protocol-name">TUIC</div>
+              <p class="protocol-desc">UDP 拥塞控制温和稳定，长连接体验流畅。</p>
+            </div>
+            <div class="protocol-card">
+              <span class="swiss-tag">TCP 兜底</span>
+              <div class="protocol-name">VLESS-Reality-Vision</div>
+              <p class="protocol-desc">不依赖 UDP，适合 UDP 限速或封禁环境。</p>
+            </div>
+            <div class="protocol-card">
+              <span class="swiss-tag">备用通道</span>
+              <div class="protocol-name">VMess-WS-TLS</div>
+              <p class="protocol-desc">经典加密传输协议，便于配合链式落地。</p>
+            </div>
+          </div>
+          <div class="step-verify">
+            <span class="verify-badge">✓ 验证</span>
+            <span>节点列表中 <strong>Hysteria2</strong> 或 <strong>TUIC</strong> 显示出延迟毫秒数（非 <code>-1</code> 或超时），即可选中设为活动服务器开始使用。</span>
+          </div>
         </div>
       </div>
 
-      <h3 class="art-subhead"><span class="sub-idx">04.4</span>完成端口、UUID 设置并导入测试</h3>
-      <p class="art-p">
-        证书配置完成后，脚本会继续询问各协议的监听端口，直接<strong>回车采用默认端口</strong>即可，节点所需的 UUID 也会由脚本自动生成。安装全部结束后，终端会一次性输出 4 种协议的节点链接与一条底部聚合订阅链接：
-      </p>
-
-      <div class="protocol-grid protocol-grid-4">
-        <div class="protocol-card">
-          <span class="swiss-tag swiss-tag-tech">推荐 · 首选</span>
-          <div class="protocol-name">Hysteria2</div>
-          <p class="protocol-desc">基于 UDP 的高吞吐传输协议，日常与晚高峰拉流表现突出。</p>
-        </div>
-        <div class="protocol-card">
-          <span class="swiss-tag swiss-tag-tech">推荐 · 首选</span>
-          <div class="protocol-name">TUIC</div>
-          <p class="protocol-desc">UDP 拥塞控制温和稳定，长连接浏览与开发工具体验流畅。</p>
-        </div>
-        <div class="protocol-card">
-          <span class="swiss-tag">TCP 兜底</span>
-          <div class="protocol-name">VLESS-Reality-Vision</div>
-          <p class="protocol-desc">无需依赖 UDP，适合对 UDP 限速或封禁较严的办公/校园网环境。</p>
-        </div>
-        <div class="protocol-card">
-          <span class="swiss-tag">备用通道</span>
-          <div class="protocol-name">VMess-WS-TLS</div>
-          <p class="protocol-desc">经典 WebSocket 加密传输协议，便于配合传统客户端或链式落地。</p>
-        </div>
-      </div>
-
-      <div class="swiss-callout">
-        <strong>客户端导入与测试：</strong>直接复制终端底部输出的<strong>聚合订阅链接</strong>导入到 <code>v2rayN</code> 等客户端中并执行真连接测试。四条协议中偶有个别协议因网络环境不通属于正常现象，日常优先挑选 <strong>Hysteria2</strong> 或 <strong>TUIC</strong> 节点使用即可。
+      <div class="swiss-callout is-warn">
+        <strong>如果全部节点测试超时：</strong>请返回检查是否已在谷歌云的 <strong>VPC 网络 → 防火墙</strong> 中添加了允许 <code>0.0.0.0/0</code> 入站、协议和端口为“全部允许”的规则（详见本文 <a href="#sec-vm" data-toc-id="sec-vm">02.3 开放防火墙</a>）。
       </div>
     </section>
 
