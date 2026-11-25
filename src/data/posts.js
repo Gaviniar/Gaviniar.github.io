@@ -208,8 +208,42 @@ function renderGcpVpsArticle() {
         <div class="spec-row" role="row">
           <div class="spec-key">VPC 端口放行<span class="spec-key-en">VPC INGRESS</span></div>
           <div class="spec-val"><span class="param-pill">TCP / UDP 放行</span></div>
-          <div class="spec-note">部署节点或开启本地订阅后，在 VPC 网络 → 防火墙规则中放行对应的随机节点与订阅端口。</div>
+          <div class="spec-note">实例创建完成后，按下方步骤在 VPC 防火墙中新增放行规则，确保节点与订阅端口可正常连通。</div>
         </div>
+      </div>
+
+      <h3 class="art-subhead"><span class="sub-idx">02.1</span>开放防火墙（VPC 网络）</h3>
+      <p class="art-p">
+        VM 实例创建完成后，还需要在谷歌云控制台放行入站端口，否则后续部署的节点将无法从外部连入。在控制台顶部搜索框搜索<strong>“防火墙”</strong>，进入<strong>“防火墙（VPC 网络）”</strong>设置界面，点击顶部<strong>“创建防火墙规则”</strong>，按以下参数填写后点击创建即可：
+      </p>
+
+      <div class="swiss-card">
+        <div class="swiss-card-head">
+          <h4 class="swiss-card-title">创建防火墙规则配置清单</h4>
+          <span class="swiss-card-code">VPC FIREWALL</span>
+        </div>
+        <ol class="step-list">
+          <li>
+            <span class="step-badge">01</span>
+            <span><strong>名称：</strong>随意填写（例如 <code>allow-all-ingress</code>，仅作标识）。</span>
+          </li>
+          <li>
+            <span class="step-badge">02</span>
+            <span><strong>目标：</strong>选择<strong>“网络中的所有实例”</strong>。</span>
+          </li>
+          <li>
+            <span class="step-badge">03</span>
+            <span><strong>流量方向：</strong>保持默认<strong>入站</strong>。</span>
+          </li>
+          <li>
+            <span class="step-badge">04</span>
+            <span><strong>来源 IPv4 范围：</strong>填写 <code>0.0.0.0/0</code>（表示允许任意外部 IP 访问）。</span>
+          </li>
+          <li>
+            <span class="step-badge">05</span>
+            <span><strong>协议和端口：</strong>选择<strong>全部允许</strong>，确认无误后点击底部<strong>创建</strong>即可生效。</span>
+          </li>
+        </ol>
       </div>
     </section>
 
