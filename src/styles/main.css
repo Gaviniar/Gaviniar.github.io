@@ -2660,3 +2660,72 @@ html[data-tone="dark"] .filter-pill.is-active {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Step-by-step Swiss Tutorial Flow Cards */
+.tutorial-steps {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.tutorial-step {
+  padding: 20px 22px;
+  border-radius: 14px;
+  border: 1px solid var(--swiss-hair);
+  background: var(--surface-subtle);
+}
+
+.tutorial-step.is-critical {
+  border-left: 3px solid var(--accent);
+}
+
+.tutorial-step-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 11px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--swiss-hair);
+}
+
+.tutorial-step-num {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.tutorial-step-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.tutorial-step-head .swiss-tag {
+  margin-left: auto;
+}
+
+.tutorial-lead {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-body);
+}
+
+.tutorial-kv {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  font-size: 14.5px;
+  line-height: 1.68;
+  color: var(--ink-body);
+}
+
+.tutorial-kv strong {
+  color: var(--ink-strong);
+}

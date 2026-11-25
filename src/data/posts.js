@@ -23,7 +23,7 @@ export const POSTS = [
     toc: [
       { id: 'sec-overview', num: '00', label: '核心架构与指标' },
       { id: 'sec-billing', num: '01', label: '结算账号与 $10 赠金' },
-      { id: 'sec-vm', num: '02', label: 'Always Free 实例矩阵' },
+      { id: 'sec-vm', num: '02', label: '创建 VM 与开放防火墙' },
       { id: 'sec-traffic', num: '03', label: '流量规则与 CDN 计费' },
       { id: 'sec-deploy', num: '04', label: 'SSH 与双方案一键部署' },
       { id: 'sec-advanced', num: '05', label: '试用期续活与链式代理' },
@@ -160,59 +160,134 @@ function renderGcpVpsArticle() {
       </div>
     </section>
 
-    <!-- 02 / VM SPECIFICATION MATRIX -->
+    <!-- 02 / STEP-BY-STEP VM CREATION & VPC FIREWALL -->
     <section class="art-section" id="sec-vm">
       <div class="sec-header">
         <div class="sec-num">02</div>
         <div>
-          <h2 class="sec-title">按官方免费层级精确创建 VM 实例</h2>
-          <p class="sec-subtitle">Compute Engine → 虚拟机实例 → 创建实例。每一项参数均直接关系到账单是否归零。</p>
+          <h2 class="sec-title">一步一步按免费层级创建 VM 实例并放行防火墙</h2>
+          <p class="sec-subtitle">跟着下面 6 个步骤逐项点击配置，避开默认磁盘、备份与高级网络三处扣费陷阱。</p>
+        </div>
+      </div>
+
+      <h3 class="art-subhead"><span class="sub-idx">02.1</span>进入「创建实例」页面</h3>
+      <p class="art-p">
+        登录 Google Cloud 控制台（<a href="https://cloud.google.com/" target="_blank" rel="noopener noreferrer">cloud.google.com</a>）后，可通过以下任意一种方式进入虚拟机创建界面：
+      </p>
+
+      <div class="swiss-step-cols">
+        <div class="swiss-card">
+          <div class="swiss-card-head">
+            <h4 class="swiss-card-title">方法一：顶部搜索（最快捷）</h4>
+            <span class="swiss-card-code">RECOMMENDED</span>
+          </div>
+          <p class="module-body">
+            直接在控制台最顶部搜索框输入 <code>虚拟机实例</code>，点击搜索结果进入列表页，再点击顶部蓝色按钮 <strong>创建实例</strong>。
+          </p>
+        </div>
+        <div class="swiss-card">
+          <div class="swiss-card-head">
+            <h4 class="swiss-card-title">方法二：左侧导航菜单</h4>
+            <span class="swiss-card-code">MENU PATH</span>
+          </div>
+          <p class="module-body">
+            点击左上角导航菜单图标（三条横线 <code>☰</code>）→ 鼠标移到 <strong>Compute Engine</strong> → 点击 <strong>虚拟机实例</strong> → 点击顶部 <strong>创建实例</strong>。
+          </p>
         </div>
       </div>
 
       <div class="swiss-callout">
-        <strong>关于估算费用显示 $7/月：</strong>创建页右侧的“每月估算费用”按原价计算，<strong>不会</strong>扣除免费额度；实际出账时，只要全部参数严格符合 <a href="https://docs.cloud.google.com/free/docs/free-cloud-features?hl=zh-cn" target="_blank" rel="noopener noreferrer">Always Free 规则</a>，系统会自动减免为 <strong>$0</strong>。
+        <strong>首次进入提示：</strong>如果是第一次打开，系统可能会提示正在启用 <code>Compute Engine API</code>，静待约 1 分钟刷新页面即可看到“创建实例”按钮（启用 API 本身免费）。
       </div>
 
-      <div class="spec-matrix" role="table" aria-label="VM 实例必选配置矩阵">
-        <div class="spec-row" role="row">
-          <div class="spec-key">区域<span class="spec-key-en">REGION</span></div>
-          <div class="spec-val"><span class="param-pill">us-west1</span> <span>俄勒冈</span></div>
-          <div class="spec-note">仅俄勒冈、爱荷华 (<code>us-central1</code>)、南卡 (<code>us-east1</code>) 免费；俄勒冈距亚洲最近、延迟最优。</div>
+      <h3 class="art-subhead"><span class="sub-idx">02.2</span>按顺序逐项配置实例（共 6 步）</h3>
+      <p class="art-p">
+        进入“创建实例”页面后，按以下顺序逐项点击配置（谷歌云新版界面左侧带有分组目录，旧版直接向下滚动找到对应栏目即可）：
+      </p>
+
+      <div class="tutorial-steps">
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 01</span>
+            <h4 class="tutorial-step-title">设置名称与免费区域</h4>
+          </div>
+          <ul class="tutorial-kv">
+            <li><strong>名称：</strong>保持默认即可，或自定义（仅限小写字母、数字和短横线）。</li>
+            <li><strong>区域：</strong>下拉选择 <span class="param-pill">us-west1（俄勒冈）</span>（美西距国内最近；亦可任选 <code>us-central1</code> 爱荷华或 <code>us-east1</code> 南卡罗来纳）。</li>
+            <li><strong>可用区：</strong>保持系统默认分配即可，无需改动。</li>
+          </ul>
         </div>
-        <div class="spec-row" role="row">
-          <div class="spec-key">机器系列与规格<span class="spec-key-en">MACHINE TYPE</span></div>
-          <div class="spec-val"><span class="param-pill">E2 · e2-micro</span> <span>标准预配</span></div>
-          <div class="spec-note">必须为非抢占式标准预配；免费层级每月覆盖 1 台实例的完整运行时长。</div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 02</span>
+            <h4 class="tutorial-step-title">选择免费机型（e2-micro）</h4>
+          </div>
+          <ul class="tutorial-kv">
+            <li>在 <strong>机器配置</strong> 栏中，<strong>系列</strong> 选择 <span class="param-pill">E2</span>。</li>
+            <li><strong>机器类型：</strong>下拉选择配置最低的 <span class="param-pill">e2-micro</span>（2 个 vCPU，1 GB 内存，保持默认标准预配）。</li>
+          </ul>
         </div>
-        <div class="spec-row" role="row">
-          <div class="spec-key">系统与启动磁盘<span class="spec-key-en">OS &amp; BOOT DISK</span></div>
-          <div class="spec-val"><span class="param-pill">Ubuntu 22.04</span> <span class="param-pill">标准盘 30 GB</span></div>
-          <div class="spec-note">勿选 Windows（含授权费），勿选 SSD 或平衡永久性磁盘，容量严格不超过 30 GB。</div>
+
+        <div class="tutorial-step is-critical">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 03</span>
+            <h4 class="tutorial-step-title">修改操作系统与 30 GB 标准磁盘</h4>
+            <span class="swiss-tag swiss-tag-accent">防扣费重点</span>
+          </div>
+          <p class="tutorial-lead">默认磁盘类型不是标准盘，<strong>必须手动修改</strong>。点击左侧 <strong>操作系统和存储空间</strong>（旧版向下滚动找到“启动磁盘”），点击 <strong>更改</strong> 按钮：</p>
+          <ul class="tutorial-kv">
+            <li><strong>操作系统：</strong>选择 <span class="param-pill">Ubuntu</span>（切勿选 Windows，含授权费）。</li>
+            <li><strong>版本：</strong>选择带 <code>x86/64</code> 的 LTS 版本（如 <code>Ubuntu 22.04</code> 或 <code>24.04 LTS</code>）。</li>
+            <li><strong>启动磁盘类型：</strong>下拉改为 <span class="param-pill is-red">标准永久性磁盘</span>（默认是平衡磁盘，不改会扣费）。</li>
+            <li><strong>大小（GB）：</strong>改为 <span class="param-pill">30</span>，然后点击底部 <strong>选择</strong> 保存。</li>
+          </ul>
         </div>
-        <div class="spec-row" role="row">
-          <div class="spec-key">数据保护<span class="spec-key-en">DATA PROTECTION</span></div>
-          <div class="spec-val"><span class="param-pill is-red">必须改：无备份</span></div>
-          <div class="spec-note">切记关闭默认开启的快照时间表，否则会产生额外的快照存储扣费。</div>
+
+        <div class="tutorial-step is-critical">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 04</span>
+            <h4 class="tutorial-step-title">关闭数据保护备份</h4>
+            <span class="swiss-tag swiss-tag-accent">防扣费重点</span>
+          </div>
+          <ul class="tutorial-kv">
+            <li>点击左侧 <strong>数据保护</strong>，找到备份方案，点选 <span class="param-pill is-red">无备份</span>，防止默认自动快照产生额外存储费用。</li>
+          </ul>
         </div>
-        <div class="spec-row" role="row">
-          <div class="spec-key">防火墙与外部 IP<span class="spec-key-en">FIREWALL &amp; IP</span></div>
-          <div class="spec-val"><span class="param-pill">HTTP / HTTPS</span> <span class="param-pill">临时 IP</span></div>
-          <div class="spec-note">静态 IP 关机闲置会扣费；临时 IP 只要实例不关机重启通常长期保持不变。</div>
+
+        <div class="tutorial-step is-critical">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 05</span>
+            <h4 class="tutorial-step-title">配置防火墙与标准网络层级</h4>
+            <span class="swiss-tag swiss-tag-accent">防扣费重点</span>
+          </div>
+          <p class="tutorial-lead">网络层级默认是高级，<strong>必须手动改为标准</strong>。点击左侧 <strong>网络</strong> 选项卡：</p>
+          <ul class="tutorial-kv">
+            <li><strong>防火墙：</strong>勾选 <span class="param-pill">允许 HTTP 流量</span> 和 <span class="param-pill">允许 HTTPS 流量</span>。</li>
+            <li><strong>网络接口：</strong>找到列表中的 <code>default</code>，点击展开修改：</li>
+            <li><strong>外部 IPv4 地址：</strong>确认保持默认 <span class="param-pill">临时</span>（不要改为静态 IP，闲置会扣费）。</li>
+            <li><strong>网络服务层级：</strong>手动点选 <span class="param-pill is-red">标准 (Standard)</span>（这样才享有每月 200 GiB 免费出站流量）。</li>
+            <li>如果下方出现 <strong>完成</strong> 按钮，点击收起保存。</li>
+          </ul>
         </div>
-        <div class="spec-row" role="row">
-          <div class="spec-key">网络服务层级<span class="spec-key-en">NETWORK TIER</span></div>
-          <div class="spec-val"><span class="param-pill is-red">标准 Standard</span></div>
-          <div class="spec-note">务必从默认“高级”改为<strong>标准层级</strong>；仅 <a href="https://cloud.google.com/network-tiers/pricing" target="_blank" rel="noopener noreferrer">标准层级</a> 含每月 200 GiB 免费出站，超出按 $0.085/GiB 计费。</div>
-        </div>
-        <div class="spec-row" role="row">
-          <div class="spec-key">VPC 端口放行<span class="spec-key-en">VPC INGRESS</span></div>
-          <div class="spec-val"><span class="param-pill">TCP / UDP 放行</span></div>
-          <div class="spec-note">实例创建完成后，按下方步骤在 VPC 防火墙中新增放行规则，确保节点与订阅端口可正常连通。</div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-head">
+            <span class="tutorial-step-num">STEP 06</span>
+            <h4 class="tutorial-step-title">点击创建并等待开机</h4>
+          </div>
+          <ul class="tutorial-kv">
+            <li>其余未提及选项全部保持默认，拉到页面最底部点击蓝色的 <strong>创建</strong> 按钮。</li>
+            <li>等待约 <strong>30 秒</strong>，虚拟机实例列表中出现绿色对勾即表示创建完成；随后点击该行右侧的 <strong>SSH</strong> 按钮即可登录跑脚本。</li>
+          </ul>
         </div>
       </div>
 
-      <h3 class="art-subhead"><span class="sub-idx">02.1</span>开放防火墙（VPC 网络）</h3>
+      <div class="swiss-callout is-tech">
+        <strong>关于右侧“每月估算费用”：</strong>配置完成后，页面右侧依然会显示每月约 <strong>$6–$7</strong> 的估算价格，这是正常现象——估算器不会计入免费层级抵扣；只要配置完全符合上述要求，实际出账单时符合 <a href="https://docs.cloud.google.com/free/docs/free-cloud-features?hl=zh-cn" target="_blank" rel="noopener noreferrer">Always Free 规则</a> 的资源会自动抵扣为 <strong>$0</strong>。
+      </div>
+
+      <h3 class="art-subhead"><span class="sub-idx">02.3</span>开放防火墙（VPC 网络）</h3>
       <p class="art-p">
         VM 实例创建完成后，还需要在谷歌云控制台放行入站端口，否则后续部署的节点将无法从外部连入。在控制台顶部搜索框搜索<strong>“防火墙”</strong>，进入<strong>“防火墙（VPC 网络）”</strong>设置界面，点击顶部<strong>“创建防火墙规则”</strong>，按以下参数填写后点击创建即可：
       </p>
