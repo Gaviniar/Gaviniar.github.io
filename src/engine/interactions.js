@@ -74,10 +74,10 @@ export function mountCommentsWidget(containerEl, { target, title = '评论交流
       <div class="comments-head">
         <div>
           <span class="swiss-kicker">${escapeHtml(kicker)}</span>
-          <h2 class="sec-title" style="margin-top: 6px; font-size: 22px;">${escapeHtml(title)}</h2>
+          <h2 class="sec-title" style="margin-top: 6px; font-size: var(--fs-xl);">${escapeHtml(title)}</h2>
           <p class="sec-subtitle">${escapeHtml(subtitle)}</p>
         </div>
-        <span class="swiss-mono" id="comments-count-badge" style="font-size: 12px; color: var(--ink-mute);">加载中…</span>
+        <span class="swiss-mono" id="comments-count-badge" style="font-size: var(--fs-xs); color: var(--ink-mute);">加载中…</span>
       </div>
 
       <form class="comment-form" id="public-comment-form">
@@ -98,7 +98,7 @@ export function mountCommentsWidget(containerEl, { target, title = '评论交流
         </label>
         <div id="cmt-feedback"></div>
         <div class="comment-form-foot">
-          <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">无须登录 · 隐私保护</span>
+          <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">无须登录 · 隐私保护</span>
           <button type="submit" class="featured-cta" id="cmt-submit-btn" style="border: none; cursor: pointer; padding: 9px 20px;">发表留言 →</button>
         </div>
       </form>
@@ -139,7 +139,7 @@ export function mountCommentsWidget(containerEl, { target, title = '评论交流
             ? `<div class="comment-owner-reply">
                 <div class="comment-reply-head">
                   <span class="swiss-tag swiss-tag-tech">站长回复</span>
-                  <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">${escapeHtml(c.ownerReplyTs || '')}</span>
+                  <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">${escapeHtml(c.ownerReplyTs || '')}</span>
                 </div>
                 <div class="comment-body">${escapeHtml(c.ownerReply).replace(/\n/g, '<br />')}</div>
               </div>`

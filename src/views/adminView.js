@@ -187,7 +187,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
       <div class="admin-lock-wrap">
         <section class="liquid-glass liquid-glass-elevated admin-lock-card">
           <span class="swiss-kicker">SECURITY GATE // 管理员身份验证</span>
-          <h1 class="art-h1" style="margin: 12px 0 8px; font-size: 28px;">${escapeHtml(SITE_CONFIG.brandName)} · 后台解锁</h1>
+          <h1 class="art-h1" style="margin: 12px 0 8px; font-size: var(--fs-xl);">${escapeHtml(SITE_CONFIG.brandName)} · 后台解锁</h1>
           <p class="admin-sub" style="margin-bottom: 18px;">
             请输入 Cloudflare Worker 的管理员密码（<code>ADMIN_TOKEN</code>）以解锁管理后台。验证状态仅保留在当前浏览器会话中。
           </p>
@@ -272,7 +272,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
           <div class="admin-top-bar">
             <div>
               <span class="swiss-kicker">ADMIN CONSOLE // PRIVATE MISSION CONTROL</span>
-              <h1 class="art-h1" style="margin: 10px 0 4px; font-size: clamp(24px, 3vw, 34px);">${escapeHtml(SITE_CONFIG.brandName)} · 管理控制台</h1>
+              <h1 class="art-h1" style="margin: 10px 0 4px; font-size: var(--fs-xl);">${escapeHtml(SITE_CONFIG.brandName)} · 管理控制台</h1>
               <p class="admin-sub">隐藏入口（<code>#/admin</code> · 快捷键 <code>Ctrl+Shift+A</code>）— 深度流量分析、可视化写作、留言审核、站点运营与运维监控。</p>
             </div>
             <div class="admin-head-actions">
@@ -476,7 +476,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
             </div>
             <div class="admin-kpi">
               <span class="admin-kpi-label">TOP CONTENT</span>
-              <div class="admin-kpi-val" style="font-size: 14px; line-height: 1.4;" title="${escapeHtml(hottestLabel)}">${escapeHtml(hottestLabel)}</div>
+              <div class="admin-kpi-val" style="font-size: var(--fs-sm); line-height: 1.4;" title="${escapeHtml(hottestLabel)}">${escapeHtml(hottestLabel)}</div>
               <span class="admin-kpi-sub">最受欢迎内容</span>
             </div>
           </div>
@@ -486,7 +486,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
             <div class="admin-subblock" style="margin-top: 0;">
               <div class="admin-subblock-head">
                 <h3>${activeRange === '30d' ? '近 30 日' : activeRange === 'today' ? '今日' : '近 7 日'}访问趋势（北京时间）</h3>
-                <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">PV / UV</span>
+                <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">PV / UV</span>
               </div>
               <div class="trend-chart ${stats.dailySeries.length > 10 ? 'is-dense' : ''}" style="grid-template-columns: repeat(${stats.dailySeries.length}, minmax(0, 1fr));">
                 ${stats.dailySeries
@@ -510,7 +510,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
             <div class="admin-subblock" style="margin-top: 0;">
               <div class="admin-subblock-head">
                 <h3>24 小时活跃时段分布（UTC+8）</h3>
-                <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">00:00 – 23:00</span>
+                <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">00:00 – 23:00</span>
               </div>
               <div class="hourly-chart">
                 ${hourly
@@ -555,7 +555,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
               </div>
               ${renderRankList(topDevices, stats.totalPv)}
               <div class="rail-divider"></div>
-              <div class="swiss-mono" style="font-size: 10.5px; color: var(--ink-mute); margin-bottom: 8px;">REFERRERS</div>
+              <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute); margin-bottom: 8px;">REFERRERS</div>
               ${renderRankList(topRefs, stats.totalPv)}
             </div>
           </div>
@@ -564,7 +564,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
           <div class="admin-subblock">
             <div class="admin-subblock-head">
               <h3>文章阅读深度与停留时长</h3>
-              <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">SCROLL >= 80% 计为完读</span>
+              <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">SCROLL >= 80% 计为完读</span>
             </div>
             ${
               engagementEntries.length
@@ -591,7 +591,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                                 <td class="swiss-mono">${e.sessions}</td>
                                 <td class="swiss-mono">${formatDuration(avgSec)}</td>
                                 <td class="swiss-mono">${avgScroll}%</td>
-                                <td class="swiss-mono" style="color: var(--accent-tech); font-weight: 700;">${comp}%</td>
+                                <td class="swiss-mono" style="color: var(--accent-tech); font-weight: 600;">${comp}%</td>
                               </tr>
                             `;
                           })
@@ -753,12 +753,12 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                     (r) => `
                   <tr>
                     <td><input type="checkbox" class="log-row-check" data-log-id="${escapeHtml(r.id)}" ${selectedLogIds.has(r.id) ? 'checked' : ''} /></td>
-                    <td class="swiss-mono" style="font-size: 12px; white-space: nowrap;">${escapeHtml(r.ts)}</td>
-                    <td class="swiss-mono" style="font-size: 12px; color: var(--accent);">#${escapeHtml(r.visitorId || '—')}</td>
+                    <td class="swiss-mono" style="font-size: var(--fs-xs); white-space: nowrap;">${escapeHtml(r.ts)}</td>
+                    <td class="swiss-mono" style="font-size: var(--fs-xs); color: var(--accent);">#${escapeHtml(r.visitorId || '—')}</td>
                     <td style="white-space: nowrap;">${escapeHtml(formatRegionLabel(r.region || '—'))}</td>
                     <td title="${escapeHtml(r.path || '/')}">${escapeHtml(formatRouteLabel(r.path || '/'))}</td>
-                    <td style="font-size: 13px;">${escapeHtml(r.device || '—')}</td>
-                    <td style="font-size: 13px; color: var(--ink-mute); white-space: nowrap;" title="${escapeHtml(r.referrer || '直接访问')}">${escapeHtml(formatReferrerLabel(r.referrer || '直接访问'))}</td>
+                    <td style="font-size: var(--fs-sm);">${escapeHtml(r.device || '—')}</td>
+                    <td style="font-size: var(--fs-sm); color: var(--ink-mute); white-space: nowrap;" title="${escapeHtml(r.referrer || '直接访问')}">${escapeHtml(formatReferrerLabel(r.referrer || '直接访问'))}</td>
                     <td>
                       <button type="button" class="log-del-btn" data-del-one-log="${escapeHtml(r.id)}" title="删除此条记录">×</button>
                     </td>
@@ -960,12 +960,12 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                               <div class="admin-cmt-meta">
                                 ${badge}
                                 <strong>${escapeHtml(c.author)}</strong>
-                                ${c.email ? `<span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">${escapeHtml(c.email)}</span>` : ''}
-                                <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">· ${escapeHtml(formatRegionLabel(c.region || ''))} · #${escapeHtml(c.visitorId || '')}</span>
+                                ${c.email ? `<span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">${escapeHtml(c.email)}</span>` : ''}
+                                <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">· ${escapeHtml(formatRegionLabel(c.region || ''))} · #${escapeHtml(c.visitorId || '')}</span>
                               </div>
-                              <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">${escapeHtml(c.ts || '')}</span>
+                              <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">${escapeHtml(c.ts || '')}</span>
                             </div>
-                            <div class="swiss-mono" style="font-size: 11.5px; color: var(--accent-tech); margin: 4px 0 8px;">
+                            <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--accent-tech); margin: 4px 0 8px;">
                               位置：${escapeHtml(formatCommentTarget(c.target))}
                             </div>
                             <p class="mini-note-text" style="margin: 0 0 10px;">${escapeHtml(c.content).replace(/\n/g, '<br />')}</p>
@@ -973,7 +973,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                               c.ownerReply
                                 ? `<div class="comment-owner-reply" style="margin-bottom: 10px;">
                                     <span class="swiss-tag swiss-tag-tech">站长已回复</span>
-                                    <div style="margin-top: 4px; font-size: 13.5px;">${escapeHtml(c.ownerReply)}</div>
+                                    <div style="margin-top: 4px; font-size: var(--fs-sm);">${escapeHtml(c.ownerReply)}</div>
                                   </div>`
                                 : ''
                             }
@@ -1247,7 +1247,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                       .map(
                         (item, idx) => `
                     <div class="draft-item">
-                      <div><span class="swiss-tag">${escapeHtml(item.tag)}</span> <span style="margin-left: 6px; font-size: 13.5px;">${escapeHtml(item.text)}</span></div>
+                      <div><span class="swiss-tag">${escapeHtml(item.tag)}</span> <span style="margin-left: 6px; font-size: var(--fs-sm);">${escapeHtml(item.text)}</span></div>
                       <button type="button" class="status-action-btn is-danger" data-del-now="${idx}">移除</button>
                     </div>
                   `
@@ -1273,7 +1273,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                     <div class="draft-item">
                       <div style="min-width: 0; overflow: hidden;">
                         <strong>${escapeHtml(l.label)}</strong>
-                        <span class="swiss-mono" style="margin-left: 8px; font-size: 12px; color: var(--ink-mute);">${escapeHtml(l.href)}</span>
+                        <span class="swiss-mono" style="margin-left: 8px; font-size: var(--fs-xs); color: var(--ink-mute);">${escapeHtml(l.href)}</span>
                       </div>
                       <button type="button" class="status-action-btn is-danger" data-del-social="${idx}">移除</button>
                     </div>
@@ -1305,7 +1305,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                     <div class="draft-item">
                       <div>
                         <strong>${escapeHtml(f.name)}</strong>
-                        <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">${escapeHtml(f.href)}${f.desc ? ` · ${escapeHtml(f.desc)}` : ''}</div>
+                        <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">${escapeHtml(f.href)}${f.desc ? ` · ${escapeHtml(f.desc)}` : ''}</div>
                       </div>
                       <button type="button" class="status-action-btn is-danger" data-del-friend="${idx}">移除</button>
                     </div>
@@ -1520,7 +1520,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
               <span class="swiss-kicker">HEALTH // 12 幕庄园原画巡检</span>
               <h2 class="panel-title" style="margin-top: 6px;">背景资源与站点概览</h2>
             </div>
-            <span class="swiss-mono" style="font-size: 12px; color: var(--ink-mute);">
+            <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">
               ${POSTS.length} 篇文章 · ${tags.length} 标签 · ${MICRO_NOTES.length} 碎碎念 · ${snap.clockShort} CST
             </span>
           </div>
@@ -1536,9 +1536,9 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                         <strong>${s.label} · ${k.label}</strong>
                         <span class="swiss-tag" data-probe-status>检测中…</span>
                       </div>
-                      <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute); margin: 4px 0 10px;">${file}</div>
+                      <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute); margin: 4px 0 10px;">${file}</div>
                       <div class="backdrop-check-foot">
-                        <span class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);" data-probe-dim>-- × --</span>
+                        <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);" data-probe-dim>-- × --</span>
                         <button type="button" class="status-action-btn" data-preview-season="${s.id}" data-preview-phase="${k.phase}">实时预览</button>
                       </div>
                     </div>
@@ -1580,9 +1580,9 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                 <div style="min-width: 0; flex: 1;">
                   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span class="${badgeCls}">${badgeText}</span>
-                    <strong style="font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(r.message || r.name)}</strong>
+                    <strong style="font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(r.message || r.name)}</strong>
                   </div>
-                  <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute); margin-top: 4px;">
+                  <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute); margin-top: 4px;">
                     ${escapeHtml(r.sha)} · ${escapeHtml(r.branch)} · ${escapeHtml(formatIsoToBeijing(r.createdAt))} CST
                   </div>
                 </div>
@@ -1614,8 +1614,8 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
           (t, i) => `
         <div class="draft-item" id="probe-row-${i}">
           <div>
-            <strong style="font-size: 13.5px;">${t.name}</strong>
-            <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute);">${t.url}</div>
+            <strong style="font-size: var(--fs-sm);">${t.name}</strong>
+            <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">${t.url}</div>
           </div>
           <span class="swiss-tag" data-probe-ms>测速中…</span>
         </div>
@@ -1692,9 +1692,9 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                 .map(
                   (l) => `
                 <tr>
-                  <td class="swiss-mono" style="font-size: 12px; white-space: nowrap;">${escapeHtml(l.ts)}</td>
+                  <td class="swiss-mono" style="font-size: var(--fs-xs); white-space: nowrap;">${escapeHtml(l.ts)}</td>
                   <td><span class="swiss-tag">${escapeHtml(l.action)}</span></td>
-                  <td style="font-size: 13px;">${escapeHtml(l.detail || '—')}</td>
+                  <td style="font-size: var(--fs-sm);">${escapeHtml(l.detail || '—')}</td>
                 </tr>
               `
                 )

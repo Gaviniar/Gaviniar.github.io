@@ -450,7 +450,7 @@ function renderPostsDirectoryView(initialTag = '') {
       <div class="directory-header">
         <div>
           <span class="swiss-kicker">ESSAYS &amp; GUIDES // 文章归档与检索</span>
-          <h1 class="art-h1" style="margin: 10px 0 0; font-size: clamp(28px, 3.6vw, 42px);">全部文章与攻略</h1>
+          <h1 class="art-h1" style="margin: 10px 0 0; font-size: var(--fs-2xl);">全部文章与攻略</h1>
         </div>
         <div class="search-wrap">
           <input type="search" id="post-search-input" class="swiss-search" placeholder="搜索标题、关键词或标签…" autocomplete="off" />
@@ -542,9 +542,9 @@ function renderNotesView() {
       <div class="panel-head">
         <div>
           <span class="swiss-kicker">FIELD NOTES // 庄园碎碎念</span>
-          <h1 class="art-h1" style="margin: 10px 0 0; font-size: clamp(28px, 3.6vw, 42px);">随手记下的片刻与灵感</h1>
+          <h1 class="art-h1" style="margin: 10px 0 0; font-size: var(--fs-2xl);">随手记下的片刻与灵感</h1>
         </div>
-        <span class="swiss-mono" style="font-size: 12px; color: var(--ink-mute);">${MICRO_NOTES.length} NOTES</span>
+        <span class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute);">${MICRO_NOTES.length} NOTES</span>
       </div>
 
       <div class="notes-timeline">
@@ -849,7 +849,7 @@ function renderAboutView() {
                       (f) => `
                     <a class="swiss-card friend-card" href="${f.href}" target="_blank" rel="noopener noreferrer">
                       <div class="swiss-card-head" style="margin-bottom: 6px; padding-bottom: 8px;">
-                        <strong class="swiss-card-title" style="font-size: 15px;">${f.name}</strong>
+                        <strong class="swiss-card-title" style="font-size: var(--fs-base);">${f.name}</strong>
                         <span class="swiss-card-code">↗</span>
                       </div>
                       <p class="mini-note-text" style="color: var(--ink-mute); margin: 0;">${f.desc || f.href}</p>

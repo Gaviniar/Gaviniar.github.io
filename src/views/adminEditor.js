@@ -204,14 +204,14 @@ export function renderArticlesManagerTab(
                               ${p.pinned ? '<span class="swiss-tag swiss-tag-accent" style="margin-left: 4px;">置顶</span>' : ''}
                             </td>
                             <td>
-                              <div style="font-weight: 700; color: var(--ink-strong);">${escapeHtml(p.title)}</div>
-                              <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute); margin-top: 3px;">
+                              <div style="font-weight: 600; color: var(--ink-strong);">${escapeHtml(p.title)}</div>
+                              <div class="swiss-mono" style="font-size: var(--fs-xs); color: var(--ink-mute); margin-top: 3px;">
                                 ${escapeHtml(p.category)} · ${escapeHtml(p.date)} · /post/${escapeHtml(p.slug)}
                               </div>
                             </td>
                             <td class="swiss-mono" style="white-space: nowrap;">${p.wordCount || '--'} 字</td>
-                            <td class="swiss-mono" style="font-weight: 700;">${pv}</td>
-                            <td class="swiss-mono" style="white-space: nowrap; font-size: 12px;">${avgDwell} / ${compRate}</td>
+                            <td class="swiss-mono" style="font-weight: 600;">${pv}</td>
+                            <td class="swiss-mono" style="white-space: nowrap; font-size: var(--fs-xs);">${avgDwell} / ${compRate}</td>
                             <td class="swiss-mono">♥ ${likeCount}</td>
                             <td style="white-space: nowrap;">
                               <div class="admin-btn-row" style="gap: 6px;">
@@ -383,7 +383,7 @@ export function renderArticlesManagerTab(
             <input type="text" id="ed-title" class="swiss-search" placeholder="输入清晰醒目的文章标题，右侧 URL 将自动生成…" value="${escapeHtml(a.title)}" />
           </label>
           <label class="admin-field">
-            <span>URL 路径 (Slug) * <small id="slug-sync-hint" style="font-weight: 500; color: var(--ink-mute);">${slugAutoSync ? '· 随标题自动生成' : '· 可手动修改'}</small></span>
+            <span>URL 路径 (Slug) * <small id="slug-sync-hint" style="font-weight: 400; color: var(--ink-mute);">${slugAutoSync ? '· 随标题自动生成' : '· 可手动修改'}</small></span>
             <div class="slug-input-group">
               <input type="text" id="ed-slug" class="swiss-search" placeholder="输入标题自动生成，也可手填" value="${escapeHtml(a.slug)}" />
               <button type="button" class="status-action-btn slug-auto-btn" id="btn-auto-slug" title="根据当前标题重新自动生成 URL">自动生成</button>
@@ -527,8 +527,8 @@ export function renderArticlesManagerTab(
         previewHtml = previewHtml.split(repoUrl).join(blobUrl);
       }
       previewEl.innerHTML = `
-        ${editingArticle.title ? `<h1 class="art-h1" style="font-size: 28px; margin-bottom: 10px;">${escapeHtml(editingArticle.title)}</h1>` : ''}
-        ${editingArticle.excerpt ? `<p class="art-lead" style="font-size: 14.5px; margin-bottom: 18px;">${escapeHtml(editingArticle.excerpt)}</p>` : ''}
+        ${editingArticle.title ? `<h1 class="art-h1" style="font-size: var(--fs-xl); margin-bottom: 10px;">${escapeHtml(editingArticle.title)}</h1>` : ''}
+        ${editingArticle.excerpt ? `<p class="art-lead" style="font-size: var(--fs-sm); margin-bottom: 18px;">${escapeHtml(editingArticle.excerpt)}</p>` : ''}
         <div class="md-article-body">${previewHtml || '<p class="empty-state">左侧开始输入，此处即时呈现效果…</p>'}</div>
       `;
       const wc = estimateWordCount(editingArticle.markdown);
