@@ -9,7 +9,29 @@ import { getBeijingDateParts, formatPad } from './atmosphere.js';
 
 const LOCAL_LOGS_KEY = 'gavins_blog_local_visits_v1';
 const ADMIN_CFG_KEY = 'gavins_blog_admin_cfg_v1';
+const IGNORE_SELF_KEY = 'gavins_blog_ignore_self_v1';
 const MAX_LOCAL_LOGS = 120;
+
+let lastTrackedKey = '';
+let lastTrackedAt = 0;
+
+export function isOwnerIgnored() {
+  try {
+    return localStorage.getItem(IGNORE_SELF_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setOwnerIgnored(enabled) {
+  try {
+    if (enabled) localStorage.setItem(IGNORE_SELF_KEY, '1');
+    else localStorage.removeItem(IGNORE_SELF_KEY);
+  } catch {
+    // ignore
+  }
+  return isOwnerIgnored();
+}
 
 export function getAdminConfig() {
   try {
@@ -86,10 +108,15 @@ function getLocalSessionId() {
 }
 
 export function trackPageView(routePath, pageTitle) {
-  // Never track admin dashboard views as visitor traffic
+  // Never track admin dashboard views or owner-excluded devices
   if (routePath.startsWith('#/admin')) return;
+  if (isOwnerIgnored()) return;
 
   const cleanPath = routePath.replace(/^#/, '') || '/';
+  const nowMs = Date.now();
+  if (cleanPath === lastTrackedKey && nowMs - lastTrackedAt < 3000) return;
+  lastTrackedKey = cleanPath;
+  lastTrackedAt = nowMs;
   const { day, ts } = getBeijingNowStrings();
   const dev = detectLocalDevice();
   const screen = `${window.innerWidth}×${window.innerHeight}`;

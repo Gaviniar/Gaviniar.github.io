@@ -13,7 +13,9 @@ import {
   getAdminConfig,
   saveAdminConfig,
   fetchAnalyticsStats,
-  clearCloudStats
+  clearCloudStats,
+  isOwnerIgnored,
+  setOwnerIgnored
 } from '../engine/analytics.js';
 import {
   generateSiteConfigSource,
@@ -36,12 +38,95 @@ function topEntries(obj, limit = 6) {
     .slice(0, limit);
 }
 
+const COUNTRY_NAMES = {
+  CN: '中国',
+  HK: '中国香港',
+  TW: '中国台湾',
+  MO: '中国澳门',
+  US: '美国',
+  JP: '日本',
+  SG: '新加坡',
+  KR: '韩国',
+  GB: '英国',
+  DE: '德国',
+  CA: '加拿大',
+  AU: '澳大利亚',
+  FR: '法国'
+};
+
+function formatRouteLabel(rawPath = '/') {
+  const clean = String(rawPath || '/').split('?')[0];
+  if (clean === '/' || clean === '') return `首页 · ${SITE_CONFIG.brandName}`;
+  if (clean === '/posts' || clean === '/archive') return '全部文章目录';
+  if (clean === '/notes') return '碎碎念时间轴';
+  if (clean === '/about') return '关于博客';
+  if (clean.startsWith('/post/')) {
+    const slug = clean.replace('/post/', '');
+    const post = POSTS.find((p) => p.slug === slug);
+    if (post) return `文章 · ${post.shortTitle || post.title}`;
+  }
+  return clean;
+}
+
+function formatReferrerLabel(rawRef = '直接访问') {
+  const ref = String(rawRef || '直接访问').toLowerCase();
+  if (ref === '直接访问') return '直接访问';
+  if (ref.includes('weixin') || ref.includes('wechat')) return '微信分享';
+  if (ref.includes('qq.com')) return 'QQ / 腾讯系';
+  if (ref.includes('github.com')) return 'GitHub';
+  if (ref.includes('google.')) return 'Google 搜索';
+  if (ref.includes('bing.com')) return 'Bing 搜索';
+  if (ref.includes('baidu.com')) return '百度搜索';
+  if (ref.includes('t.co') || ref.includes('x.com') || ref.includes('twitter.com')) return 'X / Twitter';
+  if (ref.includes('zhihu.com')) return '知乎';
+  if (ref.includes('bilibili.com')) return 'Bilibili';
+  if (ref.includes('v2ex.com')) return 'V2EX';
+  return rawRef;
+}
+
+function formatRegionLabel(rawRegion = '') {
+  const str = String(rawRegion || '未知');
+  const m = str.match(/^([A-Z]{2})\s*·\s*(.+)$/);
+  if (m && COUNTRY_NAMES[m[1]]) {
+    return `${COUNTRY_NAMES[m[1]]} · ${m[2]}`;
+  }
+  if (COUNTRY_NAMES[str]) return COUNTRY_NAMES[str];
+  return str;
+}
+
 export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
   // Mutable draft copies for Tab 02 CMS
   const draftConfig = JSON.parse(JSON.stringify(SITE_CONFIG));
   const draftNotes = JSON.parse(JSON.stringify(MICRO_NOTES));
   let activeTab = 'telemetry';
   let latestStats = null;
+  let autoRefresh = true;
+  let pollTimer = null;
+  let destroyed = false;
+
+  const stopPolling = () => {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  };
+
+  const startPolling = () => {
+    stopPolling();
+    if (!autoRefresh || destroyed || activeTab !== 'telemetry') return;
+    pollTimer = setInterval(() => {
+      if (!document.hidden && !destroyed && activeTab === 'telemetry') {
+        renderTelemetryTab({ silent: true });
+      }
+    }, 30000);
+  };
+
+  const onVisibilityChange = () => {
+    if (!document.hidden && autoRefresh && !destroyed && activeTab === 'telemetry') {
+      renderTelemetryTab({ silent: true });
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   rootEl.innerHTML = `
     <div class="admin-shell">
@@ -88,8 +173,11 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
     tabsEl.querySelectorAll('[data-tab]').forEach((b) => {
       b.classList.toggle('is-active', b.dataset.tab === tabId);
     });
-    if (tabId === 'telemetry') renderTelemetryTab();
-    else if (tabId === 'publish') renderPublishTab();
+    stopPolling();
+    if (tabId === 'telemetry') {
+      renderTelemetryTab({ silent: false });
+      startPolling();
+    } else if (tabId === 'publish') renderPublishTab();
     else if (tabId === 'health') renderHealthTab();
     else if (tabId === 'settings') renderSettingsTab();
   };
@@ -102,27 +190,32 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
   /* ========================================================================
      TAB 01: VISITOR TELEMETRY & ACCESS LOGS
      ======================================================================== */
-  async function renderTelemetryTab() {
-    bodyEl.innerHTML = `
-      <section class="liquid-glass liquid-glass-elevated admin-panel">
-        <p class="empty-state">正在读取访客统计数据…</p>
-      </section>
-    `;
+  async function renderTelemetryTab({ silent = false } = {}) {
+    if (!silent) {
+      bodyEl.innerHTML = `
+        <section class="liquid-glass liquid-glass-elevated admin-panel">
+          <p class="empty-state">正在读取访客统计数据…</p>
+        </section>
+      `;
+    }
 
     try {
       const stats = await fetchAnalyticsStats();
+      if (destroyed || activeTab !== 'telemetry') return;
       latestStats = stats;
 
       const isCloud = stats.mode === 'cloud';
+      const ignoredSelf = isOwnerIgnored();
+      const updatedTime = atmosphere.getSnapshot().clockFull;
       modeBadgeEl.textContent = isCloud ? '云端全网统计 · LIVE' : '本机预览模式 · LOCAL';
       modeBadgeEl.className = `swiss-tag ${isCloud ? 'swiss-tag-tech' : 'swiss-tag-accent'}`;
 
-      const topPages = topEntries(stats.pages, 6);
-      const topRegions = topEntries(stats.countries, 6);
-      const topDevices = topEntries(stats.devices, 6);
-      const topRefs = topEntries(stats.referrers, 5);
+      const topPages = topEntries(stats.pages, 6).map(([k, v]) => [formatRouteLabel(k), v, k]);
+      const topRegions = topEntries(stats.countries, 6).map(([k, v]) => [formatRegionLabel(k), v, k]);
+      const topDevices = topEntries(stats.devices, 6).map(([k, v]) => [k, v, k]);
+      const topRefs = topEntries(stats.referrers, 5).map(([k, v]) => [formatReferrerLabel(k), v, k]);
       const maxDaily = Math.max(1, ...stats.dailySeries.map((d) => d.pv));
-      const hottestPath = topPages[0]?.[0] || '/';
+      const hottestLabel = topPages[0]?.[0] || `首页 · ${SITE_CONFIG.brandName}`;
 
       bodyEl.innerHTML = `
         ${
@@ -140,11 +233,17 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
         <section class="liquid-glass liquid-glass-elevated admin-panel">
           <div class="admin-panel-head">
             <div>
-              <span class="swiss-kicker">TELEMETRY // 流量总览</span>
+              <span class="swiss-kicker">TELEMETRY // 流量总览 · 更新于 ${updatedTime} CST</span>
               <h2 class="panel-title" style="margin-top: 6px;">${isCloud ? '全网访客实时统计' : '本机访问记录概览'}</h2>
             </div>
             <div class="admin-btn-row">
-              <button type="button" class="status-action-btn" id="btn-refresh-stats">刷新数据</button>
+              <button type="button" class="status-action-btn ${autoRefresh ? 'is-tech-active' : ''}" id="btn-toggle-poll" title="页面切到后台标签页时自动暂停，切回自动恢复">
+                ${autoRefresh ? '● 自动刷新 30s' : '○ 自动刷新：关'}
+              </button>
+              <button type="button" class="status-action-btn ${ignoredSelf ? 'is-tech-active' : ''}" id="btn-toggle-ignore-self" title="开启后，你当前这台浏览器访问前台页面不会计入访客统计">
+                ${ignoredSelf ? '✓ 本机不计入统计' : '忽略本机访问'}
+              </button>
+              <button type="button" class="status-action-btn" id="btn-refresh-stats">立即刷新</button>
               <button type="button" class="status-action-btn" id="btn-export-stats">导出 JSON</button>
               <button type="button" class="status-action-btn is-danger" id="btn-clear-stats">清空记录</button>
             </div>
@@ -167,9 +266,9 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
               <span class="admin-kpi-sub">今日访问 · ${stats.todayUv} UV</span>
             </div>
             <div class="admin-kpi">
-              <span class="admin-kpi-label">TOP ROUTE</span>
-              <div class="admin-kpi-val" style="font-size: 16px; word-break: break-all;">${escapeHtml(hottestPath)}</div>
-              <span class="admin-kpi-sub">最受欢迎页面</span>
+              <span class="admin-kpi-label">TOP CONTENT</span>
+              <div class="admin-kpi-val" style="font-size: 15px; line-height: 1.4;" title="${escapeHtml(hottestLabel)}">${escapeHtml(hottestLabel)}</div>
+              <span class="admin-kpi-sub">最受欢迎内容</span>
             </div>
           </div>
 
@@ -201,8 +300,8 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
           <div class="admin-dist-grid">
             <div class="swiss-card">
               <div class="swiss-card-head">
-                <h4 class="swiss-card-title">热门页面</h4>
-                <span class="swiss-card-code">ROUTES</span>
+                <h4 class="swiss-card-title">热门内容</h4>
+                <span class="swiss-card-code">CONTENT</span>
               </div>
               ${renderRankList(topPages, stats.totalPv)}
             </div>
@@ -242,7 +341,7 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                           <th>北京时间</th>
                           <th>访客 ID</th>
                           <th>地区</th>
-                          <th>访问路径</th>
+                          <th>访问内容</th>
                           <th>设备 / 浏览器</th>
                           <th>来源</th>
                         </tr>
@@ -255,10 +354,10 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
                           <tr>
                             <td class="swiss-mono" style="font-size: 12px; white-space: nowrap;">${escapeHtml(r.ts)}</td>
                             <td class="swiss-mono" style="font-size: 12px; color: var(--accent);">#${escapeHtml(r.visitorId || '—')}</td>
-                            <td>${escapeHtml(r.region || '—')}</td>
-                            <td class="swiss-mono" style="font-size: 12.5px;">${escapeHtml(r.path || '/')}</td>
+                            <td>${escapeHtml(formatRegionLabel(r.region || '—'))}</td>
+                            <td title="${escapeHtml(r.path || '/')}">${escapeHtml(formatRouteLabel(r.path || '/'))}</td>
                             <td style="font-size: 13px;">${escapeHtml(r.device || '—')}</td>
-                            <td style="font-size: 13px; color: var(--ink-mute);">${escapeHtml(r.referrer || '直接访问')}</td>
+                            <td style="font-size: 13px; color: var(--ink-mute);" title="${escapeHtml(r.referrer || '直接访问')}">${escapeHtml(formatReferrerLabel(r.referrer || '直接访问'))}</td>
                           </tr>
                         `
                           )
@@ -273,7 +372,17 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
       `;
 
       document.getElementById('jump-to-setup')?.addEventListener('click', () => switchTab('settings'));
-      document.getElementById('btn-refresh-stats')?.addEventListener('click', () => renderTelemetryTab());
+      document.getElementById('btn-toggle-poll')?.addEventListener('click', () => {
+        autoRefresh = !autoRefresh;
+        if (autoRefresh) startPolling();
+        else stopPolling();
+        renderTelemetryTab({ silent: true });
+      });
+      document.getElementById('btn-toggle-ignore-self')?.addEventListener('click', () => {
+        setOwnerIgnored(!isOwnerIgnored());
+        renderTelemetryTab({ silent: true });
+      });
+      document.getElementById('btn-refresh-stats')?.addEventListener('click', () => renderTelemetryTab({ silent: false }));
       document.getElementById('btn-export-stats')?.addEventListener('click', () => {
         const blob = new Blob([JSON.stringify(latestStats, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
@@ -312,12 +421,13 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
     return `
       <div class="rank-list">
         ${entries
-          .map(([label, count]) => {
+          .map(([label, count, raw]) => {
             const pct = total ? Math.round((count / total) * 100) : 0;
+            const tooltip = raw && raw !== label ? `${label} (${raw})` : label;
             return `
               <div class="rank-row">
                 <div class="rank-top">
-                  <span class="rank-name" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+                  <span class="rank-name" title="${escapeHtml(tooltip)}">${escapeHtml(label)}</span>
                   <span class="rank-num">${count} <small>(${pct}%)</small></span>
                 </div>
                 <div class="rank-bar-bg"><div class="rank-bar-fg" style="width: ${pct}%;"></div></div>
@@ -763,4 +873,10 @@ export function renderAdminConsole(rootEl, { atmosphere, renderFooter }) {
   }
 
   switchTab(activeTab);
+
+  return () => {
+    destroyed = true;
+    stopPolling();
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  };
 }

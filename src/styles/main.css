@@ -3138,3 +3138,10 @@ html[data-tone="dark"] .filter-pill.is-active {
     align-items: stretch;
   }
 }
+
+
+.status-action-btn.is-tech-active {
+  color: var(--accent-tech);
+  border-color: rgba(15, 138, 120, 0.45);
+  background: var(--accent-tech-soft);
+}

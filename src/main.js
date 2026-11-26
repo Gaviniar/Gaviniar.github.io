@@ -752,7 +752,7 @@ function handleRoute() {
   const params = new URLSearchParams(queryStr || '');
 
   if (path === '#/admin') {
-    renderAdminConsole(appRoot, { atmosphere, renderFooter });
+    scrollCleanup = renderAdminConsole(appRoot, { atmosphere, renderFooter });
     updateActiveNav('');
   } else if (path.startsWith('#/post/')) {
     const slug = path.replace('#/post/', '');
