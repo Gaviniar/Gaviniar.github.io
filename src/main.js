@@ -7,6 +7,8 @@ import {
 } from './engine/atmosphere.js';
 import { ManorCanvasFX } from './engine/canvasFx.js';
 import { BackdropManager } from './engine/backdropManager.js';
+import { trackPageView } from './engine/analytics.js';
+import { renderAdminConsole } from './views/adminView.js';
 import { SITE_CONFIG, MICRO_NOTES } from './data/siteConfig.js';
 import { CATEGORIES, POSTS, getPostBySlug, getAllTags } from './data/posts.js';
 
@@ -120,6 +122,10 @@ function renderAtmosphereControls() {
     if (e.key === 'Escape' && document.body.classList.contains('is-zen')) {
       setZen(false);
     }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      window.location.hash = window.location.hash === '#/admin' ? '#/' : '#/admin';
+    }
   });
 }
 
@@ -173,7 +179,7 @@ function attachGlassSpecularHover() {
 function renderFooter() {
   return `
     <footer class="liquid-glass site-footer">
-      <span>© ${SITE_CONFIG.established} ${SITE_CONFIG.brandName} · ${SITE_CONFIG.bio}</span>
+      <span class="footer-secret-trigger" title="双击进入管理后台">© ${SITE_CONFIG.established} ${SITE_CONFIG.brandName} · ${SITE_CONFIG.bio}</span>
       <span>LIQUID GLASS × SWISS GRID · ASIA/SHANGHAI (UTC+8)</span>
     </footer>
   `;
@@ -745,26 +751,39 @@ function handleRoute() {
   const [path, queryStr] = raw.split('?');
   const params = new URLSearchParams(queryStr || '');
 
-  if (path.startsWith('#/post/')) {
+  if (path === '#/admin') {
+    renderAdminConsole(appRoot, { atmosphere, renderFooter });
+    updateActiveNav('');
+  } else if (path.startsWith('#/post/')) {
     const slug = path.replace('#/post/', '');
     renderArticleView(slug);
     updateActiveNav('posts');
+    trackPageView(path, getPostBySlug(slug).shortTitle);
   } else if (path === '#/posts' || path === '#/archive') {
     renderPostsDirectoryView(params.get('tag') || '');
     updateActiveNav('posts');
+    trackPageView(path, '全部文章');
   } else if (path === '#/notes') {
     renderNotesView();
     updateActiveNav('notes');
+    trackPageView(path, '碎碎念');
   } else if (path === '#/about') {
     renderAboutView();
     updateActiveNav('about');
+    trackPageView(path, '关于');
   } else {
     renderHomeView();
     updateActiveNav('home');
+    trackPageView('#/', SITE_CONFIG.brandName);
   }
 
   window.scrollTo({ top: 0, behavior: 'instant' });
   attachGlassSpecularHover();
+
+  // Subtle hidden admin entrance: double-click copyright text in footer
+  appRoot.querySelector('.footer-secret-trigger')?.addEventListener('dblclick', () => {
+    window.location.hash = '#/admin';
+  });
 }
 
 /* ==========================================================================
