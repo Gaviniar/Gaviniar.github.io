@@ -205,32 +205,68 @@ export function parseMarkdown(markdown = '') {
       continue;
     }
 
-    // Unordered list (including task lists - [ ] / - [x])
+    // Unordered list (including task lists - [ ] / - [x] and indented sub-lists)
     if (/^\s*[-*+]\s+/.test(line)) {
+      const baseIndent = (line.match(/^(\s*)/)?.[1] || '').length;
       const items = [];
       while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
+        const curIndent = (lines[i].match(/^(\s*)/)?.[1] || '').length;
+        if (curIndent < baseIndent) break;
         const text = lines[i].replace(/^\s*[-*+]\s+/, '');
+        i += 1;
+
+        // Collect indented sub-items belonging to this list item
+        const subItems = [];
+        let subOrdered = false;
+        while (i < lines.length && /^\s{2,}([-*+]|\d+\.)\s+/.test(lines[i])) {
+          const subIndent = (lines[i].match(/^(\s*)/)?.[1] || '').length;
+          if (subIndent <= curIndent) break;
+          if (/^\s+\d+\.\s+/.test(lines[i])) subOrdered = true;
+          subItems.push(`<li>${renderInline(lines[i].replace(/^\s+([-*+]|\d+\.)\s+/, ''))}</li>`);
+          i += 1;
+        }
+        const subHtml = subItems.length
+          ? `<${subOrdered ? 'ol class="md-olist"' : 'ul class="md-list"'} style="margin-top: 6px; margin-bottom: 4px;">${subItems.join('')}</${subOrdered ? 'ol' : 'ul'}>`
+          : '';
+
         const task = text.match(/^\[( |x|X)\]\s+(.*)$/);
         if (task) {
           const checked = task[1].toLowerCase() === 'x';
           items.push(
-            `<li class="md-task-item"><span class="md-check ${checked ? 'is-done' : ''}">${checked ? '✓' : ''}</span><span>${renderInline(task[2])}</span></li>`
+            `<li class="md-task-item"><span class="md-check ${checked ? 'is-done' : ''}">${checked ? '✓' : ''}</span><span>${renderInline(task[2])}${subHtml}</span></li>`
           );
         } else {
-          items.push(`<li>${renderInline(text)}</li>`);
+          items.push(`<li>${renderInline(text)}${subHtml}</li>`);
         }
-        i += 1;
       }
       html.push(`<ul class="md-list">${items.join('')}</ul>`);
       continue;
     }
 
-    // Ordered list
+    // Ordered list (preserving numbering across indented sub-lists)
     if (/^\s*\d+\.\s+/.test(line)) {
+      const baseIndent = (line.match(/^(\s*)/)?.[1] || '').length;
       const items = [];
       while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
-        items.push(`<li>${renderInline(lines[i].replace(/^\s*\d+\.\s+/, ''))}</li>`);
+        const curIndent = (lines[i].match(/^(\s*)/)?.[1] || '').length;
+        if (curIndent < baseIndent) break;
+        const text = lines[i].replace(/^\s*\d+\.\s+/, '');
         i += 1;
+
+        const subItems = [];
+        let subOrdered = false;
+        while (i < lines.length && /^\s{2,}([-*+]|\d+\.)\s+/.test(lines[i])) {
+          const subIndent = (lines[i].match(/^(\s*)/)?.[1] || '').length;
+          if (subIndent <= curIndent) break;
+          if (/^\s+\d+\.\s+/.test(lines[i])) subOrdered = true;
+          subItems.push(`<li>${renderInline(lines[i].replace(/^\s+([-*+]|\d+\.)\s+/, ''))}</li>`);
+          i += 1;
+        }
+        const subHtml = subItems.length
+          ? `<${subOrdered ? 'ol class="md-olist"' : 'ul class="md-list"'} style="margin-top: 6px; margin-bottom: 4px;">${subItems.join('')}</${subOrdered ? 'ol' : 'ul'}>`
+          : '';
+
+        items.push(`<li>${renderInline(text)}${subHtml}</li>`);
       }
       html.push(`<ol class="md-olist">${items.join('')}</ol>`);
       continue;

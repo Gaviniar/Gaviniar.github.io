@@ -3720,6 +3720,23 @@ html[data-tone="light"] select.swiss-search option {
   gap: 12px;
 }
 
+.slug-input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.slug-input-group .swiss-search {
+  min-width: 0;
+  flex: 1;
+}
+
+.slug-auto-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
 .editor-checkbox {
   display: inline-flex;
   align-items: center;

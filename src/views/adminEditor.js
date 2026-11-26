@@ -1,11 +1,12 @@
 /**
  * Tab 02: Article Manager & Forum-Style Visual Markdown Studio
- * - Unified article table with live PV, dwell time, completion rate & likes
+ * - Unified Markdown CMS: EVERY article (including existing published ones) is editable online
+ * - Real-time URL Slug auto-generation from title (with manual override anytime)
  * - Forum-like formatting toolbar, shortcuts (Ctrl+B/I/K, Tab), split/edit/preview modes
  * - Drag & drop or Ctrl+V screenshot auto-compression & GitHub upload with instant local preview
  */
 
-import { CATEGORIES, ALL_POSTS } from '../data/posts.js';
+import { CATEGORIES } from '../data/posts.js';
 import {
   escapeHtml,
   parseMarkdown,
@@ -14,7 +15,6 @@ import {
 } from '../engine/markdown.js';
 import {
   publishArticlesToGitHub,
-  publishSiteConfigToGitHub,
   uploadPostImageToGitHub
 } from '../engine/githubCms.js';
 import { getAdminConfig } from '../engine/analytics.js';
@@ -30,19 +30,41 @@ function formatDuration(sec = 0) {
   return `${m}m ${s}s`;
 }
 
-function slugifyTitle(title = '') {
-  const ascii = String(title)
+function stableShortHash(str = '') {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36).slice(0, 6);
+}
+
+/**
+ * Smart real-time slug generator:
+ * - Extracts clean English/numeric keywords when present (e.g. "用 Google Cloud 搭建 VPS" -> "google-cloud-vps")
+ * - Falls back to clean deterministic date + short hash for pure Chinese titles (e.g. "post-20261127-k8p2x")
+ */
+function slugifyTitle(title = '', dateStr = '') {
+  const cleanTitle = String(title || '').trim();
+  if (!cleanTitle) return '';
+
+  const asciiSlug = cleanTitle
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 40);
-  return ascii || `post-${Date.now().toString(36)}`;
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 44);
+
+  if (asciiSlug && asciiSlug.length >= 2) {
+    return asciiSlug;
+  }
+
+  const compactDate = String(dateStr || '').replace(/[^0-9]/g, '').slice(0, 8) ||
+    new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  return `post-${compactDate}-${stableShortHash(cleanTitle)}`;
 }
 
 function todayDotDate(atmosphere) {
-  const d = atmosphere.getSnapshot().dateStr; // YYYY-MM-DD
-  return d.replace(/-/g, '.');
+  return atmosphere.getSnapshot().dateStr.replace(/-/g, '.');
 }
 
 function wrapSelection(textarea, prefix, suffix = '', placeholder = '') {
@@ -71,24 +93,14 @@ function insertBlock(textarea, snippet) {
 
 export function renderArticlesManagerTab(
   bodyEl,
-  { atmosphere, draftArticles, draftConfig, draftNotes, latestStats, onNeedSettings, onStateChanged }
+  { atmosphere, draftArticles, latestStats, onNeedSettings, onStateChanged }
 ) {
   let editingArticle = null; // null = list view, object = editor view
   let editingIsNew = false;
+  let editingOriginalSlug = '';
+  let slugAutoSync = false; // auto-sync slug while typing title unless user manually edited slug
   let editorMode = 'split'; // split | edit | preview
   let dirtyArticles = false;
-  let dirtyOverrides = false;
-
-  const getBuiltins = () => ALL_POSTS.filter((p) => p.source === 'builtin');
-
-  const getEffectivePostRow = (post) => {
-    const ov = (draftConfig.postOverrides || {})[post.slug] || {};
-    const status = post.source === 'builtin' ? ov.status || post.status : post.status || 'published';
-    const pinned = post.source === 'builtin'
-      ? (typeof ov.pinned === 'boolean' ? ov.pinned : post.pinned)
-      : Boolean(post.pinned);
-    return { ...post, status, pinned };
-  };
 
   const render = () => {
     if (editingArticle) {
@@ -99,7 +111,7 @@ export function renderArticlesManagerTab(
   };
 
   /* ------------------------------------------------------------------------
-     SUB-VIEW A: ARTICLE DIRECTORY & LIVE TELEMETRY MATRIX
+     SUB-VIEW A: UNIFIED ARTICLE DIRECTORY & LIVE TELEMETRY MATRIX
      ------------------------------------------------------------------------ */
   function renderListView() {
     const stats = latestStats || {};
@@ -108,14 +120,18 @@ export function renderArticlesManagerTab(
     const likes = stats.likes || {};
     const hasGithub = Boolean(getAdminConfig().githubToken);
 
-    const mdRows = draftArticles.map((a) => ({
-      ...a,
-      source: 'markdown',
-      wordCount: estimateWordCount(a.markdown || ''),
-      readTime: a.readTime || estimateReadTime(a.markdown || '')
-    }));
-
-    const combined = [...mdRows, ...getBuiltins()].map(getEffectivePostRow);
+    const rows = draftArticles
+      .map((a) => ({
+        ...a,
+        status: a.status || 'published',
+        pinned: Boolean(a.pinned),
+        wordCount: estimateWordCount(a.markdown || ''),
+        readTime: a.readTime || estimateReadTime(a.markdown || '')
+      }))
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return String(b.date || '').localeCompare(String(a.date || ''));
+      });
 
     const statusBadge = (s) => {
       if (s === 'draft') return '<span class="swiss-tag">草稿</span>';
@@ -127,13 +143,13 @@ export function renderArticlesManagerTab(
       <section class="liquid-glass liquid-glass-elevated admin-panel">
         <div class="admin-panel-head">
           <div>
-            <span class="swiss-kicker">ARTICLES // 文章管理与阅读表现</span>
-            <h2 class="panel-title" style="margin-top: 6px;">全站文章总览（${combined.length} 篇）</h2>
+            <span class="swiss-kicker">ARTICLES // 全站文章管理与阅读表现</span>
+            <h2 class="panel-title" style="margin-top: 6px;">全部文章（${rows.length} 篇 · 均支持可视化编辑）</h2>
           </div>
           <div class="admin-btn-row">
             <button type="button" class="featured-cta" id="btn-new-article" style="border: none; cursor: pointer; padding: 9px 18px;">+ 撰写新文章</button>
             ${
-              dirtyArticles || dirtyOverrides
+              dirtyArticles
                 ? `<button type="button" class="status-action-btn is-tech-active" id="btn-push-articles-list">
                     ${hasGithub ? '↑ 推送更改上线' : '配置 Token 以推送'}
                   </button>`
@@ -170,51 +186,48 @@ export function renderArticlesManagerTab(
               </tr>
             </thead>
             <tbody>
-              ${combined
-                .map((p) => {
-                  const pathKey = `/post/${p.slug}`;
-                  const pv = pages[pathKey] || 0;
-                  const eng = engagement[pathKey];
-                  const avgDwell = eng && eng.sessions ? formatDuration(eng.totalDwellSec / eng.sessions) : '--';
-                  const compRate = eng && eng.sessions ? `${Math.round((eng.completed / eng.sessions) * 100)}%` : '--';
-                  const likeCount = likes[p.slug] || 0;
+              ${
+                rows.length
+                  ? rows
+                      .map((p) => {
+                        const pathKey = `/post/${p.slug}`;
+                        const pv = pages[pathKey] || 0;
+                        const eng = engagement[pathKey];
+                        const avgDwell = eng && eng.sessions ? formatDuration(eng.totalDwellSec / eng.sessions) : '--';
+                        const compRate = eng && eng.sessions ? `${Math.round((eng.completed / eng.sessions) * 100)}%` : '--';
+                        const likeCount = likes[p.slug] || 0;
 
-                  return `
-                    <tr>
-                      <td style="white-space: nowrap;">
-                        ${statusBadge(p.status)}
-                        ${p.pinned ? '<span class="swiss-tag swiss-tag-accent" style="margin-left: 4px;">置顶</span>' : ''}
-                      </td>
-                      <td>
-                        <div style="font-weight: 700; color: var(--ink-strong);">${escapeHtml(p.title)}</div>
-                        <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute); margin-top: 3px;">
-                          ${escapeHtml(p.category)} · ${escapeHtml(p.date)} · /post/${escapeHtml(p.slug)} · ${p.source === 'builtin' ? '精排长文' : 'Markdown'}
-                        </div>
-                      </td>
-                      <td class="swiss-mono" style="white-space: nowrap;">${p.wordCount || '--'} 字</td>
-                      <td class="swiss-mono" style="font-weight: 700;">${pv}</td>
-                      <td class="swiss-mono" style="white-space: nowrap; font-size: 12px;">${avgDwell} / ${compRate}</td>
-                      <td class="swiss-mono">♥ ${likeCount}</td>
-                      <td style="white-space: nowrap;">
-                        <div class="admin-btn-row" style="gap: 6px;">
-                          ${
-                            p.source === 'markdown'
-                              ? `<button type="button" class="status-action-btn" data-edit-slug="${escapeHtml(p.slug)}">编辑</button>`
-                              : `<a class="status-action-btn" style="text-decoration: none;" href="#/post/${escapeHtml(p.slug)}">查看</a>`
-                          }
-                          <button type="button" class="status-action-btn" data-pin-slug="${escapeHtml(p.slug)}" data-pin-src="${p.source}">${p.pinned ? '取消置顶' : '置顶'}</button>
-                          <button type="button" class="status-action-btn" data-toggle-vis="${escapeHtml(p.slug)}" data-vis-src="${p.source}">${p.status === 'hidden' ? '恢复显示' : '隐藏'}</button>
-                          ${
-                            p.source === 'markdown'
-                              ? `<button type="button" class="status-action-btn is-danger" data-del-slug="${escapeHtml(p.slug)}">删除</button>`
-                              : ''
-                          }
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                })
-                .join('')}
+                        return `
+                          <tr>
+                            <td style="white-space: nowrap;">
+                              ${statusBadge(p.status)}
+                              ${p.pinned ? '<span class="swiss-tag swiss-tag-accent" style="margin-left: 4px;">置顶</span>' : ''}
+                            </td>
+                            <td>
+                              <div style="font-weight: 700; color: var(--ink-strong);">${escapeHtml(p.title)}</div>
+                              <div class="swiss-mono" style="font-size: 11px; color: var(--ink-mute); margin-top: 3px;">
+                                ${escapeHtml(p.category)} · ${escapeHtml(p.date)} · /post/${escapeHtml(p.slug)}
+                              </div>
+                            </td>
+                            <td class="swiss-mono" style="white-space: nowrap;">${p.wordCount || '--'} 字</td>
+                            <td class="swiss-mono" style="font-weight: 700;">${pv}</td>
+                            <td class="swiss-mono" style="white-space: nowrap; font-size: 12px;">${avgDwell} / ${compRate}</td>
+                            <td class="swiss-mono">♥ ${likeCount}</td>
+                            <td style="white-space: nowrap;">
+                              <div class="admin-btn-row" style="gap: 6px;">
+                                <button type="button" class="status-action-btn is-tech-active" data-edit-slug="${escapeHtml(p.slug)}">编辑</button>
+                                <a class="status-action-btn" style="text-decoration: none;" href="#/post/${escapeHtml(p.slug)}">预览</a>
+                                <button type="button" class="status-action-btn" data-pin-slug="${escapeHtml(p.slug)}">${p.pinned ? '取消置顶' : '置顶'}</button>
+                                <button type="button" class="status-action-btn" data-toggle-vis="${escapeHtml(p.slug)}">${p.status === 'hidden' ? '恢复显示' : '隐藏'}</button>
+                                <button type="button" class="status-action-btn is-danger" data-del-slug="${escapeHtml(p.slug)}">删除</button>
+                              </div>
+                            </td>
+                          </tr>
+                        `;
+                      })
+                      .join('')
+                  : '<tr><td colspan="7" class="empty-state">暂无文章，点击右上角「+ 撰写新文章」开始创作。</td></tr>'
+              }
             </tbody>
           </table>
         </div>
@@ -223,6 +236,8 @@ export function renderArticlesManagerTab(
 
     bodyEl.querySelector('#btn-new-article')?.addEventListener('click', () => {
       editingIsNew = true;
+      editingOriginalSlug = '';
+      slugAutoSync = true;
       editingArticle = {
         slug: '',
         title: '',
@@ -233,7 +248,8 @@ export function renderArticlesManagerTab(
         excerpt: '',
         status: 'published',
         pinned: false,
-        markdown: '## 第一节标题\n\n在这里开始写作，点击上方工具栏即可像论坛发帖一样快速排版、插入代码块或直接拖拽/粘贴截图。\n\n> [!TIP] 小提示：右侧实时预览效果与前台 Swiss Grid 文章页完全一致。\n'
+        markdown:
+          '## 第一节标题\n\n在这里开始写作，点击上方工具栏即可像论坛发帖一样快速排版、插入代码块或直接拖拽/粘贴截图。\n\n> [!TIP] 小提示：右侧实时预览效果与前台文章页完全一致。\n'
       };
       render();
     });
@@ -241,9 +257,11 @@ export function renderArticlesManagerTab(
     bodyEl.querySelector('#btn-restore-local-draft')?.addEventListener('click', () => {
       try {
         const cached = JSON.parse(localStorage.getItem(LOCAL_DRAFT_KEY));
-        if (cached) {
+        if (cached && cached.article) {
           editingArticle = cached.article;
           editingIsNew = Boolean(cached.isNew);
+          editingOriginalSlug = cached.originalSlug || cached.article.slug || '';
+          slugAutoSync = editingIsNew && !cached.article.slug;
           render();
         }
       } catch {
@@ -261,6 +279,8 @@ export function renderArticlesManagerTab(
         const found = draftArticles.find((a) => a.slug === btn.dataset.editSlug);
         if (!found) return;
         editingIsNew = false;
+        editingOriginalSlug = found.slug;
+        slugAutoSync = false; // keep existing URL intact unless user clicks 自动 or edits manually
         editingArticle = JSON.parse(JSON.stringify(found));
         render();
       });
@@ -268,46 +288,25 @@ export function renderArticlesManagerTab(
 
     bodyEl.querySelectorAll('[data-pin-slug]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const slug = btn.dataset.pinSlug;
-        const src = btn.dataset.pinSrc;
-        if (src === 'builtin') {
-          if (!draftConfig.postOverrides) draftConfig.postOverrides = {};
-          const cur = draftConfig.postOverrides[slug] || {};
-          draftConfig.postOverrides[slug] = { ...cur, pinned: !cur.pinned };
-          dirtyOverrides = true;
-        } else {
-          const target = draftArticles.find((a) => a.slug === slug);
-          if (target) {
-            target.pinned = !target.pinned;
-            dirtyArticles = true;
-          }
+        const target = draftArticles.find((a) => a.slug === btn.dataset.pinSlug);
+        if (target) {
+          target.pinned = !target.pinned;
+          dirtyArticles = true;
+          onStateChanged?.();
+          render();
         }
-        onStateChanged?.();
-        render();
       });
     });
 
     bodyEl.querySelectorAll('[data-toggle-vis]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const slug = btn.dataset.toggleVis;
-        const src = btn.dataset.visSrc;
-        if (src === 'builtin') {
-          if (!draftConfig.postOverrides) draftConfig.postOverrides = {};
-          const cur = draftConfig.postOverrides[slug] || {};
-          draftConfig.postOverrides[slug] = {
-            ...cur,
-            status: cur.status === 'hidden' ? 'published' : 'hidden'
-          };
-          dirtyOverrides = true;
-        } else {
-          const target = draftArticles.find((a) => a.slug === slug);
-          if (target) {
-            target.status = target.status === 'hidden' ? 'published' : 'hidden';
-            dirtyArticles = true;
-          }
+        const target = draftArticles.find((a) => a.slug === btn.dataset.toggleVis);
+        if (target) {
+          target.status = target.status === 'hidden' ? 'published' : 'hidden';
+          dirtyArticles = true;
+          onStateChanged?.();
+          render();
         }
-        onStateChanged?.();
-        render();
       });
     });
 
@@ -335,18 +334,9 @@ export function renderArticlesManagerTab(
       btn.disabled = true;
       btn.textContent = '正在推送到 GitHub…';
       try {
-        const msgs = [];
-        if (dirtyArticles) {
-          const r = await publishArticlesToGitHub(draftArticles, `content(admin): update articles (${todayDotDate(atmosphere)})`);
-          msgs.push(`articles.json (${r.sha})`);
-          dirtyArticles = false;
-        }
-        if (dirtyOverrides) {
-          const r = await publishSiteConfigToGitHub(draftConfig, draftNotes, `content(admin): update article visibility/pin`);
-          msgs.push(`siteConfig.js (${r.sha})`);
-          dirtyOverrides = false;
-        }
-        fb.innerHTML = `<div class="swiss-callout is-tech" style="margin: 0;"><strong>推送成功！</strong>已更新 ${msgs.join('、')}，GitHub Actions 约 30 秒后上线。</div>`;
+        const r = await publishArticlesToGitHub(draftArticles, `content(admin): update articles (${todayDotDate(atmosphere)})`);
+        dirtyArticles = false;
+        fb.innerHTML = `<div class="swiss-callout is-tech" style="margin: 0;"><strong>推送成功！</strong>已更新 <code>articles.json</code>（Commit <code>${escapeHtml(r.sha)}</code>），GitHub Actions 约 30 秒后上线。</div>`;
       } catch (err) {
         fb.innerHTML = `<div class="swiss-callout is-warn" style="margin: 0;"><strong>推送失败：</strong>${escapeHtml(err.message)}</div>`;
       } finally {
@@ -390,13 +380,13 @@ export function renderArticlesManagerTab(
         <div class="editor-meta-grid">
           <label class="admin-field" style="grid-column: span 2;">
             <span>文章标题 *</span>
-            <input type="text" id="ed-title" class="swiss-search" placeholder="输入清晰醒目的文章标题…" value="${escapeHtml(a.title)}" />
+            <input type="text" id="ed-title" class="swiss-search" placeholder="输入清晰醒目的文章标题，右侧 URL 将自动生成…" value="${escapeHtml(a.title)}" />
           </label>
           <label class="admin-field">
-            <span>URL 路径 (Slug) *</span>
-            <div style="display: flex; gap: 6px;">
-              <input type="text" id="ed-slug" class="swiss-search" placeholder="如 my-first-note" value="${escapeHtml(a.slug)}" ${!editingIsNew ? 'readonly title="已发布文章暂不支持修改 Slug"' : ''} />
-              ${editingIsNew ? '<button type="button" class="status-action-btn" id="btn-auto-slug" title="自动生成 Slug">自动</button>' : ''}
+            <span>URL 路径 (Slug) * <small id="slug-sync-hint" style="font-weight: 500; color: var(--ink-mute);">${slugAutoSync ? '· 随标题自动生成' : '· 可手动修改'}</small></span>
+            <div class="slug-input-group">
+              <input type="text" id="ed-slug" class="swiss-search" placeholder="输入标题自动生成，也可手填" value="${escapeHtml(a.slug)}" />
+              <button type="button" class="status-action-btn slug-auto-btn" id="btn-auto-slug" title="根据当前标题重新自动生成 URL">自动生成</button>
             </div>
           </label>
           <label class="admin-field">
@@ -488,6 +478,7 @@ export function renderArticlesManagerTab(
 
     const titleInput = bodyEl.querySelector('#ed-title');
     const slugInput = bodyEl.querySelector('#ed-slug');
+    const slugHint = bodyEl.querySelector('#slug-sync-hint');
     const catSelect = bodyEl.querySelector('#ed-category');
     const statusSelect = bodyEl.querySelector('#ed-status');
     const dateInput = bodyEl.querySelector('#ed-date');
@@ -501,10 +492,20 @@ export function renderArticlesManagerTab(
     const fbEl = bodyEl.querySelector('#editor-feedback');
     const imgFileInput = bodyEl.querySelector('#ed-img-file');
 
+    const updateSlugHint = () => {
+      if (slugHint) {
+        slugHint.textContent = slugAutoSync ? '· 随标题自动生成' : '· 已手动指定';
+      }
+    };
+
     const syncDraftFromInputs = () => {
       editingArticle.title = titleInput.value.trim();
       editingArticle.shortTitle = editingArticle.title;
-      editingArticle.slug = slugInput.value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+      editingArticle.slug = slugInput.value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
       editingArticle.category = catSelect.value;
       editingArticle.status = statusSelect.value;
       editingArticle.date = dateInput.value.trim() || todayDotDate(atmosphere);
@@ -521,7 +522,6 @@ export function renderArticlesManagerTab(
     const renderLivePreview = () => {
       syncDraftFromInputs();
       const parsed = parseMarkdown(editingArticle.markdown);
-      // Replace recently uploaded repo paths with local object URLs for instant preview
       let previewHtml = parsed.html;
       for (const [repoUrl, blobUrl] of uploadedPreviewMap.entries()) {
         previewHtml = previewHtml.split(repoUrl).join(blobUrl);
@@ -535,7 +535,10 @@ export function renderArticlesManagerTab(
       metricsEl.textContent = `字数：${wc} · 预计阅读 ${estimateReadTime(editingArticle.markdown)} · 章节：${parsed.toc.length}`;
 
       try {
-        localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ isNew: editingIsNew, article: editingArticle }));
+        localStorage.setItem(
+          LOCAL_DRAFT_KEY,
+          JSON.stringify({ isNew: editingIsNew, originalSlug: editingOriginalSlug, article: editingArticle })
+        );
         autoSaveEl.textContent = `草稿已自动暂存于本机 · ${atmosphere.getSnapshot().clockShort}`;
       } catch {
         // ignore
@@ -544,14 +547,31 @@ export function renderArticlesManagerTab(
 
     renderLivePreview();
 
-    [titleInput, slugInput, catSelect, statusSelect, dateInput, tagsInput, pinnedCheck, excerptInput, mdTextarea].forEach((el) => {
-      el?.addEventListener('input', renderLivePreview);
-      el?.addEventListener('change', renderLivePreview);
+    // Real-time auto-slug while typing title
+    titleInput.addEventListener('input', () => {
+      if (slugAutoSync) {
+        slugInput.value = slugifyTitle(titleInput.value, dateInput.value);
+      }
+      renderLivePreview();
+    });
+
+    // If user manually edits slug, pause auto-sync; if cleared completely, resume auto-sync
+    slugInput.addEventListener('input', () => {
+      slugAutoSync = slugInput.value.trim() === '';
+      updateSlugHint();
+      renderLivePreview();
     });
 
     bodyEl.querySelector('#btn-auto-slug')?.addEventListener('click', () => {
-      slugInput.value = slugifyTitle(titleInput.value);
+      slugAutoSync = true;
+      slugInput.value = slugifyTitle(titleInput.value, dateInput.value);
+      updateSlugHint();
       renderLivePreview();
+    });
+
+    [catSelect, statusSelect, dateInput, tagsInput, pinnedCheck, excerptInput, mdTextarea].forEach((el) => {
+      el?.addEventListener('input', renderLivePreview);
+      el?.addEventListener('change', renderLivePreview);
     });
 
     bodyEl.querySelector('#btn-editor-back')?.addEventListener('click', () => {
@@ -714,13 +734,15 @@ export function renderArticlesManagerTab(
         return;
       }
       if (!editingArticle.slug) {
-        editingArticle.slug = slugifyTitle(editingArticle.title);
+        editingArticle.slug = slugifyTitle(editingArticle.title, editingArticle.date);
         slugInput.value = editingArticle.slug;
       }
 
-      const existingIdx = draftArticles.findIndex((x) => x.slug === editingArticle.slug);
-      if (editingIsNew && existingIdx >= 0) {
-        fbEl.innerHTML = `<div class="swiss-callout is-warn" style="margin: 0;">Slug <code>${escapeHtml(editingArticle.slug)}</code> 已存在，请换一个 URL 路径。</div>`;
+      const conflict = draftArticles.find(
+        (x) => x.slug === editingArticle.slug && (editingIsNew || x.slug !== editingOriginalSlug)
+      );
+      if (conflict) {
+        fbEl.innerHTML = `<div class="swiss-callout is-warn" style="margin: 0;">Slug <code>${escapeHtml(editingArticle.slug)}</code> 已被其他文章占用，请换一个 URL 路径。</div>`;
         return;
       }
 
@@ -738,9 +760,15 @@ export function renderArticlesManagerTab(
         markdown: editingArticle.markdown
       };
 
-      if (existingIdx >= 0) draftArticles[existingIdx] = cleanRecord;
+      const targetIdx = editingIsNew
+        ? -1
+        : draftArticles.findIndex((x) => x.slug === editingOriginalSlug);
+
+      if (targetIdx >= 0) draftArticles[targetIdx] = cleanRecord;
       else draftArticles.unshift(cleanRecord);
+
       dirtyArticles = true;
+      editingOriginalSlug = cleanRecord.slug;
       onStateChanged?.();
 
       if (!getAdminConfig().githubToken) {
