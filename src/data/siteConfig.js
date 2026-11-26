@@ -9,8 +9,8 @@ export const SITE_CONFIG = {
   bio: '小舟从此逝，江海寄余生',
   coords: 'UTC+8 · BEIJING // PERSONAL BLOG',
   established: '2026',
-  // Cloudflare Worker 全网访客统计接口（公开上报端点，管理密码仅存于浏览器本地）
-  analyticsEndpoint: 'https://blog-analytics.traplijun.workers.dev',
+  // 全网访客统计接口（通过 stat.blog.gavinli.top 免费 Vercel Edge 中转至 Cloudflare Worker，国内直连可用）
+  analyticsEndpoint: 'https://stat.blog.gavinli.top',
   links: [],
   nowList: []
 };

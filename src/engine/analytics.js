@@ -15,8 +15,15 @@ export function getAdminConfig() {
   try {
     const raw = localStorage.getItem(ADMIN_CFG_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
+    const savedUrl = (parsed.workerUrl || '').replace(/\/+$/, '');
+    const siteUrl = (SITE_CONFIG.analyticsEndpoint || '').replace(/\/+$/, '');
+    // Auto-upgrade legacy *.workers.dev saved in localStorage when siteConfig moves to custom domain
+    const workerUrl =
+      savedUrl && !savedUrl.includes('.workers.dev')
+        ? savedUrl
+        : siteUrl || savedUrl;
     return {
-      workerUrl: (parsed.workerUrl || SITE_CONFIG.analyticsEndpoint || '').replace(/\/+$/, ''),
+      workerUrl,
       adminToken: parsed.adminToken || '',
       githubToken: parsed.githubToken || '',
       githubOwner: parsed.githubOwner || 'Gaviniar',
