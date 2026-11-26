@@ -133,18 +133,17 @@ export function trackPageView(routePath, pageTitle) {
     lang
   });
 
+  // Use CORS-simple fetch (credentials: 'omit' + text/plain) instead of sendBeacon(application/json),
+  // because sendBeacon forces credentials:'include' which fails preflight when the Worker omits Allow-Credentials.
   try {
-    if (navigator.sendBeacon) {
-      const blob = new Blob([payload], { type: 'application/json' });
-      navigator.sendBeacon(`${endpoint}/api/collect`, blob);
-    } else {
-      fetch(`${endpoint}/api/collect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload,
-        keepalive: true
-      }).catch(() => {});
-    }
+    fetch(`${endpoint}/api/collect`, {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: payload,
+      keepalive: true
+    }).catch(() => {});
   } catch {
     // silent fail
   }
