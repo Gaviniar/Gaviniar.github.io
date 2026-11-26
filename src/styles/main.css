@@ -2986,20 +2986,34 @@ html[data-tone="dark"] .filter-pill.is-active {
   margin-top: 22px;
 }
 
+.admin-dist-grid > .swiss-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .rank-list {
   display: grid;
   gap: 11px;
+  min-width: 0;
+}
+
+.rank-row {
+  min-width: 0;
 }
 
 .rank-top {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  align-items: baseline;
+  gap: 10px;
   font-size: 13px;
   margin-bottom: 4px;
+  min-width: 0;
 }
 
 .rank-name {
+  flex: 1;
+  min-width: 0;
   color: var(--ink-strong);
   font-weight: 600;
   overflow: hidden;
@@ -3008,9 +3022,15 @@ html[data-tone="dark"] .filter-pill.is-active {
 }
 
 .rank-num {
+  flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--ink-mute);
+  white-space: nowrap;
+}
+
+.admin-log-table td:nth-child(3),
+.admin-log-table td:last-child {
   white-space: nowrap;
 }
 
