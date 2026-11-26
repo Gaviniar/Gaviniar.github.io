@@ -110,10 +110,13 @@ export default {
           return json({ ok: true, skipped: 'bot' }, 200, request, env);
         }
 
-        const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+        const ip =
+          request.headers.get('X-Visitor-IP') ||
+          request.headers.get('CF-Connecting-IP') ||
+          '0.0.0.0';
         const cf = request.cf || {};
-        const country = cf.country || 'UN';
-        const city = cf.city || cf.region || 'Unknown';
+        const country = request.headers.get('X-Visitor-Country') || cf.country || 'UN';
+        const city = request.headers.get('X-Visitor-City') || cf.city || cf.region || 'Unknown';
         const device = parseDevice(ua);
         const day = getBeijingDay();
         const ts = getBeijingTimestamp();

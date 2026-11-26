@@ -1,0 +1,5 @@
+{
+  "name": "gavins-blog-analytics-proxy",
+  "private": true,
+  "type": "module"
+}
