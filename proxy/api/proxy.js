@@ -1,6 +1,6 @@
 /**
- * Vercel Edge Proxy for Gavin's Blog Analytics
- * - Mainland China friendly custom domain (e.g. stat.blog.gavinli.top) via Aliyun DNS CNAME
+ * Vercel Edge Proxy for Gavin's Blog Analytics & Interactions
+ * - Mainland China friendly custom domain (stat.blog.gavinli.top) via Aliyun DNS CNAME
  * - Forwards real visitor IP, country & city from Vercel edge headers to Cloudflare Worker
  */
 
@@ -22,7 +22,7 @@ function buildCorsHeaders(request) {
   const origin = request.headers.get('origin') || '*';
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400'

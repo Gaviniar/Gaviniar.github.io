@@ -1,20 +1,32 @@
 /**
  * 个人博客文章库
- * - 每篇文章都会自动出现在首页文章流、文章检索页与上下篇导航中
- * - Google Cloud VPS 指南作为其中一篇「技术攻略」收录在博客体系内
+ * - 合并内置深度长文与后台可视化编辑器发布的 Markdown 文章（src/data/articles.json）
+ * - 支持后台置顶、隐藏、草稿状态与自动目录提取
  */
+
+import rawMdArticles from './articles.json';
+import { SITE_CONFIG } from './siteConfig.js';
+import {
+  parseMarkdown,
+  renderMarkdownArticleShell,
+  estimateWordCount,
+  estimateReadTime
+} from '../engine/markdown.js';
 
 export const CATEGORIES = ['全部', '技术攻略', '设计手记', '随笔思考', '工具箱'];
 
-export const POSTS = [
+const BUILTIN_POSTS = [
   {
     slug: 'google-cloud-vps-ai-pro',
+    source: 'builtin',
+    status: 'published',
     index: '01',
     pinned: false,
     category: '技术攻略',
     categoryEn: 'GUIDE // CLOUD',
     date: '2026.02.18',
     readTime: '8 MIN',
+    wordCount: 3600,
     title: '用 Google AI Pro 每月 $10 赠金，搭建长期免维护的谷歌云 VPS',
     shortTitle: 'Google Cloud 免费 VPS 搭建与 AI Pro $10 赠金抵扣完整指南',
     excerpt:
@@ -33,8 +45,64 @@ export const POSTS = [
   }
 ];
 
+function hydrateMdArticle(item, idx) {
+  const parsed = parseMarkdown(item.markdown || '');
+  const toc = [
+    { id: 'sec-overview', num: '00', label: '文章导览' },
+    ...parsed.toc
+  ];
+  const postObj = {
+    slug: item.slug,
+    source: 'markdown',
+    status: item.status || 'published',
+    index: String(idx).padStart(2, '0'),
+    pinned: Boolean(item.pinned),
+    category: item.category || '随笔思考',
+    categoryEn: 'ARTICLE // MD',
+    date: item.date || '2026.01.01',
+    readTime: item.readTime || estimateReadTime(item.markdown || ''),
+    wordCount: estimateWordCount(item.markdown || ''),
+    title: item.title || '未命名文章',
+    shortTitle: item.shortTitle || item.title || '未命名文章',
+    excerpt: item.excerpt || '',
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    markdown: item.markdown || '',
+    toc,
+    renderContent: () => renderMarkdownArticleShell(postObj)
+  };
+  return postObj;
+}
+
+const overrides = SITE_CONFIG.postOverrides || {};
+
+const hydratedMdPosts = (Array.isArray(rawMdArticles) ? rawMdArticles : []).map((item, i) =>
+  hydrateMdArticle(item, BUILTIN_POSTS.length + i + 1)
+);
+
+export const ALL_POSTS = [...hydratedMdPosts, ...BUILTIN_POSTS]
+  .map((p) => {
+    const ov = overrides[p.slug];
+    if (!ov) return p;
+    return {
+      ...p,
+      pinned: typeof ov.pinned === 'boolean' ? ov.pinned : p.pinned,
+      status: ov.status || p.status
+    };
+  })
+  .sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return String(b.date || '').localeCompare(String(a.date || ''));
+  })
+  .map((p, i, arr) => ({ ...p, index: String(arr.length - i).padStart(2, '0') }));
+
+export const POSTS = ALL_POSTS.filter((p) => p.status === 'published');
+
+export function getRawMarkdownArticles() {
+  return Array.isArray(rawMdArticles) ? JSON.parse(JSON.stringify(rawMdArticles)) : [];
+}
+
 export function getPostBySlug(slug) {
-  return POSTS.find((p) => p.slug === slug) || POSTS[0];
+  return ALL_POSTS.find((p) => p.slug === slug) || POSTS[0] || ALL_POSTS[0];
 }
 
 export function getAllTags() {

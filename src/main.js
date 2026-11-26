@@ -7,7 +7,8 @@ import {
 } from './engine/atmosphere.js';
 import { ManorCanvasFX } from './engine/canvasFx.js';
 import { BackdropManager } from './engine/backdropManager.js';
-import { trackPageView } from './engine/analytics.js';
+import { trackPageView, trackEngagement } from './engine/analytics.js';
+import { mountLikeWidget, mountCommentsWidget } from './engine/interactions.js';
 import { renderAdminConsole } from './views/adminView.js';
 import { SITE_CONFIG, MICRO_NOTES } from './data/siteConfig.js';
 import { CATEGORIES, POSTS, getPostBySlug, getAllTags } from './data/posts.js';
@@ -176,6 +177,37 @@ function attachGlassSpecularHover() {
 /* ==========================================================================
    SHARED COMPONENTS
    ========================================================================== */
+function renderAnnouncementBanner() {
+  const ann = SITE_CONFIG.announcement;
+  if (!ann || !ann.enabled || !ann.text) return '';
+  if (sessionStorage.getItem('gavins_ann_dismissed') === ann.text) return '';
+  const toneCls = ann.tone === 'warn' ? 'is-warn' : ann.tone === 'note' ? 'is-note' : 'is-tech';
+  return `
+    <div class="liquid-glass site-announcement ${toneCls}" id="site-announcement">
+      <div class="announcement-main">
+        <span class="swiss-tag ${ann.tone === 'warn' ? 'swiss-tag-accent' : 'swiss-tag-tech'}">公告</span>
+        <span class="announcement-text">${ann.text}</span>
+        ${
+          ann.href
+            ? `<a class="announcement-link" href="${ann.href}" ${ann.href.startsWith('http') ? 'target="_blank" rel="noopener noreferrer"' : ''}>${ann.linkLabel || '查看详情 →'}</a>`
+            : ''
+        }
+      </div>
+      <button type="button" class="announcement-close" id="btn-close-announcement" aria-label="关闭公告">×</button>
+    </div>
+  `;
+}
+
+function bindAnnouncementClose() {
+  document.getElementById('btn-close-announcement')?.addEventListener('click', () => {
+    const el = document.getElementById('site-announcement');
+    if (el) el.remove();
+    if (SITE_CONFIG.announcement?.text) {
+      sessionStorage.setItem('gavins_ann_dismissed', SITE_CONFIG.announcement.text);
+    }
+  });
+}
+
 function renderFooter() {
   return `
     <footer class="liquid-glass site-footer">
@@ -219,6 +251,7 @@ function renderHomeView() {
 
   appRoot.innerHTML = `
     <div class="home-grid">
+      ${renderAnnouncementBanner()}
       <!-- Personal Blog Masthead + Live Manor HUD -->
       <section class="liquid-glass home-hero">
         <div class="home-hero-top">
@@ -601,6 +634,9 @@ function renderArticleView(slug) {
       <article class="liquid-glass liquid-glass-elevated article-paper">
         ${post.renderContent()}
 
+        <!-- Reader Likes Widget -->
+        <div id="article-like-mount"></div>
+
         <!-- Prev / Next Article Navigation -->
         <nav class="article-pager" aria-label="上下篇导航">
           ${
@@ -626,12 +662,22 @@ function renderArticleView(slug) {
                 </a>`
           }
         </nav>
+
+        <!-- Article Comments Widget -->
+        <div id="article-comments-mount"></div>
       </article>
     </div>
     ${renderFooter()}
   `;
 
   setupArticleInteractions(post);
+  mountLikeWidget(document.getElementById('article-like-mount'), post.slug);
+  mountCommentsWidget(document.getElementById('article-comments-mount'), {
+    target: `post:${post.slug}`,
+    title: '文章评论',
+    subtitle: '欢迎就本文内容提问、纠错或分享你的实践经验。',
+    kicker: 'ARTICLE COMMENTS // 文章讨论'
+  });
 }
 
 function setupArticleInteractions(post) {
@@ -673,9 +719,40 @@ function setupArticleInteractions(post) {
   const progressPct = document.getElementById('read-progress-pct');
   const sections = post.toc.map((t) => document.getElementById(t.id)).filter(Boolean);
 
+  // Reading depth & active dwell time tracker
+  let maxScrollPct = 0;
+  let activeDwellMs = 0;
+  let visibleSince = document.hidden ? null : Date.now();
+  let engagementFlushed = false;
+
+  const flushEngagement = () => {
+    if (engagementFlushed) return;
+    if (visibleSince !== null) {
+      activeDwellMs += Date.now() - visibleSince;
+      visibleSince = null;
+    }
+    const dwellSec = Math.round(activeDwellMs / 1000);
+    if (dwellSec >= 2) {
+      engagementFlushed = true;
+      trackEngagement(`#/post/${post.slug}`, dwellSec, maxScrollPct);
+    }
+  };
+
+  const onVis = () => {
+    if (document.hidden) {
+      if (visibleSince !== null) {
+        activeDwellMs += Date.now() - visibleSince;
+        visibleSince = null;
+      }
+    } else if (visibleSince === null) {
+      visibleSince = Date.now();
+    }
+  };
+
   const onScroll = () => {
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     const pct = Math.min(100, Math.max(0, Math.round((window.scrollY / maxScroll) * 100)));
+    if (pct > maxScrollPct) maxScrollPct = pct;
     if (progressBar) progressBar.style.width = `${pct}%`;
     if (progressPct) progressPct.textContent = `${pct}%`;
 
@@ -698,35 +775,105 @@ function setupArticleInteractions(post) {
   };
 
   window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('visibilitychange', onVis);
+  window.addEventListener('pagehide', flushEngagement);
   onScroll();
-  scrollCleanup = () => window.removeEventListener('scroll', onScroll);
+
+  scrollCleanup = () => {
+    flushEngagement();
+    window.removeEventListener('scroll', onScroll);
+    document.removeEventListener('visibilitychange', onVis);
+    window.removeEventListener('pagehide', flushEngagement);
+  };
 }
 
 /* ==========================================================================
-   05 / ABOUT & COLOPHON VIEW
+   05 / ABOUT, SOCIAL LINKS, FRIEND LINKS & GUESTBOOK VIEW
    ========================================================================== */
 function renderAboutView() {
-  appRoot.innerHTML = `
-    <section class="liquid-glass liquid-glass-elevated about-card">
-      <span class="swiss-kicker">ABOUT // ${SITE_CONFIG.brandName.toUpperCase()}</span>
-      <h1 class="art-h1" style="margin-top: 14px;">${SITE_CONFIG.brandName}</h1>
-      <p class="art-lead" style="margin-top: 12px;">${SITE_CONFIG.bio}</p>
+  const links = SITE_CONFIG.links || [];
+  const friends = SITE_CONFIG.friendLinks || [];
 
-      <div class="swiss-card" style="margin-top: 24px; max-width: 520px;">
-        <div class="swiss-card-head">
-          <h2 class="swiss-card-title">SITE SPECIFICATION</h2>
-          <span class="swiss-card-code">UTC+8</span>
+  appRoot.innerHTML = `
+    <div class="about-stack">
+      <section class="liquid-glass liquid-glass-elevated about-card">
+        <span class="swiss-kicker">ABOUT // ${SITE_CONFIG.brandName.toUpperCase()}</span>
+        <h1 class="art-h1" style="margin-top: 14px;">${SITE_CONFIG.brandName}</h1>
+        <p class="art-lead" style="margin-top: 12px;">${SITE_CONFIG.bio}</p>
+
+        <div class="about-grid-2">
+          <div class="swiss-card">
+            <div class="swiss-card-head">
+              <h2 class="swiss-card-title">SITE SPECIFICATION</h2>
+              <span class="swiss-card-code">UTC+8</span>
+            </div>
+            <div class="rail-meta-grid" style="margin-top: 0;">
+              <div class="rail-meta-row"><span>BLOG</span><span class="rail-meta-val">${SITE_CONFIG.brandName}</span></div>
+              <div class="rail-meta-row"><span>TIMEZONE</span><span class="rail-meta-val">Asia/Shanghai (UTC+8)</span></div>
+              <div class="rail-meta-row"><span>TIME PHASES</span><span class="rail-meta-val">6 (日出→深夜)</span></div>
+              <div class="rail-meta-row"><span>SEASONS × WEATHER</span><span class="rail-meta-val">春夏秋冬 × 晴雾雨雪</span></div>
+            </div>
+          </div>
+
+          <div class="swiss-card">
+            <div class="swiss-card-head">
+              <h2 class="swiss-card-title">联系与社交链接</h2>
+              <span class="swiss-card-code">CONTACT</span>
+            </div>
+            ${
+              links.length
+                ? `<div class="about-links-list">
+                    ${links
+                      .map(
+                        (l) => `
+                      <a class="about-link-row" href="${l.href}" ${l.href.startsWith('http') ? 'target="_blank" rel="noopener noreferrer"' : ''}>
+                        <strong>${l.label}</strong>
+                        <span class="swiss-mono">${l.href.replace(/^mailto:/, '')}</span>
+                      </a>
+                    `
+                      )
+                      .join('')}
+                  </div>`
+                : '<p class="mini-note-text" style="color: var(--ink-mute);">暂无公开联系方式。</p>'
+            }
+          </div>
         </div>
-        <div class="rail-meta-grid" style="margin-top: 0;">
-          <div class="rail-meta-row"><span>BLOG</span><span class="rail-meta-val">${SITE_CONFIG.brandName}</span></div>
-          <div class="rail-meta-row"><span>TIMEZONE</span><span class="rail-meta-val">Asia/Shanghai (UTC+8)</span></div>
-          <div class="rail-meta-row"><span>TIME PHASES</span><span class="rail-meta-val">6 (日出→深夜)</span></div>
-          <div class="rail-meta-row"><span>SEASONS × WEATHER</span><span class="rail-meta-val">春夏秋冬 × 晴雾雨雪</span></div>
-        </div>
-      </div>
-    </section>
+
+        ${
+          friends.length
+            ? `<div style="margin-top: 26px;">
+                <span class="swiss-kicker">FRIEND LINKS // 友情链接</span>
+                <div class="friend-links-grid">
+                  ${friends
+                    .map(
+                      (f) => `
+                    <a class="swiss-card friend-card" href="${f.href}" target="_blank" rel="noopener noreferrer">
+                      <div class="swiss-card-head" style="margin-bottom: 6px; padding-bottom: 8px;">
+                        <strong class="swiss-card-title" style="font-size: 15px;">${f.name}</strong>
+                        <span class="swiss-card-code">↗</span>
+                      </div>
+                      <p class="mini-note-text" style="color: var(--ink-mute); margin: 0;">${f.desc || f.href}</p>
+                    </a>
+                  `
+                    )
+                    .join('')}
+                </div>
+              </div>`
+            : ''
+        }
+      </section>
+
+      <section class="liquid-glass liquid-glass-elevated about-card" id="about-guestbook-mount"></section>
+    </div>
     ${renderFooter()}
   `;
+
+  mountCommentsWidget(document.getElementById('about-guestbook-mount'), {
+    target: 'guestbook',
+    title: '站点留言板',
+    subtitle: '来都来了，打个招呼、交换友链或随便聊两句吧。',
+    kicker: 'GUESTBOOK // 访客留言'
+  });
 }
 
 /* ==========================================================================
@@ -779,6 +926,7 @@ function handleRoute() {
 
   window.scrollTo({ top: 0, behavior: 'instant' });
   attachGlassSpecularHover();
+  bindAnnouncementClose();
 
   // Subtle hidden admin entrance: double-click copyright text in footer
   appRoot.querySelector('.footer-secret-trigger')?.addEventListener('dblclick', () => {

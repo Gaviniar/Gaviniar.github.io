@@ -11,8 +11,22 @@ export const SITE_CONFIG = {
   established: '2026',
   // 全网访客统计接口（通过 stat.blog.gavinli.top 免费 Vercel Edge 中转至 Cloudflare Worker，国内直连可用）
   analyticsEndpoint: 'https://stat.blog.gavinli.top',
-  links: [],
-  nowList: []
+  announcement: {
+    enabled: false,
+    text: '',
+    href: '',
+    linkLabel: '',
+    tone: 'tech'
+  },
+  links: [
+    {
+      label: 'Email',
+      href: 'mailto:Gavinli.edu.cn@gmail.com'
+    }
+  ],
+  friendLinks: [],
+  nowList: [],
+  postOverrides: {}
 };
 
 /**
